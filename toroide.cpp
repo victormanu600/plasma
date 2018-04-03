@@ -13,9 +13,9 @@ FILE *dat;
 int main(){
     int i,j,k;
     printf("Introduzca el radio mayor");
-    scanf("%f",R);
+    scanf("%f",&R);
     printf("Introduzca el radio menor");
-    scanf("%f",r);
+    scanf("%f",&r);
     dat = fopen("toroide.txt","w");
     fprintf(dat," \"x\",\"y\",\"value\"\n");
     for(i=-10*(r+R);i<=10*(r+R);i++){
