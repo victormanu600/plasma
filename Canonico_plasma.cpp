@@ -27,9 +27,6 @@ void condiciones_iniciales(void);
 void crear_matriz(void);
 void crear_matriz2(void);
 void posicion_promedio_celda(int a);
-float posicion_promedio_celda_x(int a);
-float posicion_promedio_celda_y(int a);
-float posicion_promedio_celda_z(int a);
 void condiciones_periodicas(void);
 void condiciones_periodicas2(void);
 void esferas_duras(void);
@@ -42,6 +39,7 @@ float distanciazcelda(int a, int b);
 void intercambiar(int a, int b);
 int signo(float a);
 int numcelda(int a);
+int numcelda2(int a);
 void elegir_particula(void);
 void mover(void);
 void insertar_particulas(void);
@@ -138,6 +136,14 @@ main(){
 	posiciones_iniciales();
 	salidageo();
 
+	part[1000].x = 0.8;
+    part[1000].y = 0.4;
+    part[1000].x = part[1].x*1000000;
+    part[1000].y = part[1].y*1000000;
+
+    printf("\nparticula 1\n x: %f y: %f ncelda2: %i",part[1].x,part[1].y,numcelda2(1000));
+    getchar();
+
 	/*part[0].x = 0.5;
 	for(i=1;i<=winicial;i++){
 		part[0].y = 0.5;
@@ -189,7 +195,7 @@ main(){
             condiciones_periodicas();
 
             if((part[n1].inmovilidad>=15000)&&(p>=-1000000)){
-                //printf("\nLa particula %i est· inmovil",n1);
+                //printf("\nLa particula %i est√° inmovil",n1);
                 //printf("\nx: %f y: %f z: %f carga: %i",part[0].x, part[0].y, part[0].z, part[0].carga);
                 //printf("\ndxx: %f dyy: %f dzz: %f",dxx,dyy,dzz);
                 //imprimir_particula(0);
@@ -421,7 +427,6 @@ void crear_matriz2(){
         }
     }
     nceldas=contadorm;
-
     for(i=1;i<=nceldas;i++){
         contadorvec = 0;
         for(j=1;j<=nceldas;j++){
@@ -460,6 +465,21 @@ int numcelda(int a){
 	return(nmatriz[(int)(part[a].x)+1][(int)(part[a].y)+1][(int)(part[a].z-0.5)+1]);
 }
 ////////////////////////////////////////////////////////////////////////////////////
+int numcelda2(int a){
+    float rn;
+    int fraccion;
+    rn = sqrt( pow(part[a].x,2) + pow(part[a].y,2) );
+    fraccion =  (int)(((int)(rn/(1000000))+1)*pi*0.25);
+    printf("\nrn: %f fraccion: %i entrada1: %i entrada2: %i",rn,fraccion,(int)(rn/(1000000))+1,(int)( fraccion*atan(part[a].y/part[a].x)/(0.25*pi) )+1);
+    if( fraccion >= 1 ){
+        return( nmatriz2[ (int)(rn/(1000000))+1 ][ (int)( fraccion*atan(part[a].y/part[a].x)/(0.25*pi) )+1 ] );
+    }
+    else{
+        return( nmatriz2[1][1] );
+    }
+
+}
+////////////////////////////////////////////////////////////////////////////////////
 void posicion_promedio_celda(int a){
     int i;
     float xcm,ycm,zcm,xsuma=0,ysuma=0,zsuma=0;
@@ -493,53 +513,6 @@ void posicion_promedio_celda(int a){
         matriz[a].x = xcm;
         matriz[a].y = ycm;
         matriz[a].z = zcm;
-    }
-}////////////////////////////////////////////////////////////////////////////////////
-float posicion_promedio_celda_x(int a){
-    int i;
-    float xcm,xsuma=0;
-
-    for(i=1;i<=matriz[a].nparticulas;i++){
-        xsuma += part[ matriz[a].particulas[i] ].x;
-    }
-    if(matriz[a].nparticulas!=0){
-        xcm = xsuma/(1.0*matriz[a].nparticulas);
-        return(xcm);
-    }
-    else{
-        return(matriz[a].x);
-    }
-}
-////////////////////////////////////////////////////////////////////////////////////
-float posicion_promedio_celda_y(int a){
-    int i;
-    float ycm,ysuma=0;
-
-    for(i=1;i<=matriz[a].nparticulas;i++){
-        ysuma += part[ matriz[a].particulas[i] ].y;
-    }
-    if(matriz[a].nparticulas!=0){
-        ycm = ysuma/(1.0*matriz[a].nparticulas);
-        return(ycm);
-    }
-    else{
-        return(matriz[a].y);
-    }
-}
-////////////////////////////////////////////////////////////////////////////////////
-float posicion_promedio_celda_z(int a){
-    int i;
-    float zcm,zsuma=0;
-
-    for(i=1;i<=matriz[a].nparticulas;i++){
-        zsuma += part[ matriz[a].particulas[i] ].z;
-    }
-    if(matriz[a].nparticulas!=0){
-        zcm = zsuma/(1.0*matriz[a].nparticulas);
-        return(zcm);
-    }
-    else{
-        return(matriz[a].z);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -1032,7 +1005,7 @@ float de_mov(void){
             if((matriz[i].carga!=0)&&(i!=n1celda)){
                 d = distanciacelda(ncvi, i);
                 if(i == n0celda){
-                    printf("\nVete a la roÒa pues v: 0");
+                    printf("\nVete a la ro√±a pues v: 0");
                     getchar();
                 }
       //          printf("%i,",i);
@@ -1057,7 +1030,7 @@ float de_mov(void){
             if((matriz[i].carga!=0)&&(i!=n0celda)){
                 d = distanciacelda(ncnf, i);
                 if(i == n1celda){
-                    printf("\nVete a la roÒa pues v: n1");
+                    printf("\nVete a la ro√±a pues v: n1");
                     getchar();
                 }
       //          printf("%i,",i);
