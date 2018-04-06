@@ -36,8 +36,11 @@ float distancia(int a, int b);
 float distanciaz(int a,int b);
 float distanciacelda(int a, int b);
 float distanciazcelda(int a, int b);
+float distanciapartcel(int a, int b);
+float distanciazpartcel(int a, int b);
 void intercambiar(int a, int b);
 int signo(float a);
+int maximo(int a, int b);
 int numcelda(int a);
 int numcelda2(int a);
 void elegir_particula(void);
@@ -102,7 +105,7 @@ struct particulas{
 struct smatriz{
 	float x,y,z;
 	int carga,nparticulas,nvecinos;
-	int vecinos[28];
+	int vecinos[50];
 	int particulas[150];
 }matriz[50*50*50+1];
 
@@ -138,10 +141,10 @@ main(){
 
 	part[1000].x = 0.8;
     part[1000].y = 0.4;
-    part[1000].x = part[1].x*1000000;
-    part[1000].y = part[1].y*1000000;
+    part[1000].x = part[1000].x*1000000;
+    part[1000].y = part[1000].y*1000000;
 
-    printf("\nparticula 1\n x: %f y: %f ncelda2: %i",part[1].x,part[1].y,numcelda2(1000));
+    printf("\nparticula 1000\n x: %f y: %f ncelda2: %i",part[1000].x,part[1000].y,numcelda2(1000));
     getchar();
 
 	/*part[0].x = 0.5;
@@ -164,7 +167,6 @@ main(){
     printf("\nWr: %f Sigma: %e npart:%i, nn:%i, ne:%i, np: %i ",w,sigma,npart,nn,ne,np);
     printf("\nner: %f nnr: %f Volumen: %e  B: %f ",ner, nnr, volumen, B);
     printf("\ndistrmp: %f distrmn: %f", distrmp, distrmn);
-    getchar();
 
     if(lngamma==0) B = encuentrab();
     for(i=0;i<=clases;i++){
@@ -357,30 +359,34 @@ void crear_matriz(){
     for(i=1;i<=nceldas;i++){
         contadorvec=0;
         for(j=1;j<=nceldas;j++){
-            //if(i!=j){
-                xx = matriz[j].x; yy = matriz[j].y; zz = matriz[j].z;
-                if(fabs(matriz[i].x - matriz[j].x)==(int)(winicial-1)){
-                    if(matriz[i].x - matriz[j].x>0){
-                        xx += (int)(winicial);
-                    }
-                    else{
-                        xx -= (int)(winicial);
-                    }
+            xx = matriz[j].x; yy = matriz[j].y; zz = matriz[j].z;
+            if(fabs(matriz[i].x - matriz[j].x)==(int)(winicial-1)){
+            //if(fabs(matriz[i].x - matriz[j].x)>(w*0.5)){
+                if(matriz[i].x - matriz[j].x>0){
+                    xx += (int)(winicial);
+                    //xx += w;
                 }
-                if(fabs(matriz[i].y - matriz[j].y)==(int)(winicial-1)){
-                    if(matriz[i].y - matriz[j].y>0){
-                        yy += (int)(winicial);
-                    }
-                    else{
-                        yy -= (int)(winicial);
-                    }
+                else{
+                    xx -= (int)(winicial);
+                    //xx -= w;
                 }
-                if( (fabs(matriz[i].x-xx)<=1)&&(fabs(matriz[i].y-yy)<=1)&&(fabs(matriz[i].z-zz)<=1) ){
-                    contadorvec++;
-                    matriz[i].nvecinos++;
-                    matriz[i].vecinos[contadorvec] = j;
+            }
+            if(fabs(matriz[i].y - matriz[j].y)==(int)(winicial-1)){
+            //if(fabs(matriz[i].y - matriz[j].y)>(w*0.5)){
+                if(matriz[i].y - matriz[j].y>0){
+                    yy += (int)(winicial);
+                    //yy += w;
                 }
-            //}
+                else{
+                    yy -= (int)(winicial);
+                    //yy -= w;
+                }
+            }
+            if( (fabs(matriz[i].x-xx)<2)&&(fabs(matriz[i].y-yy)<2)&&(fabs(matriz[i].z-zz)<2) ){
+                contadorvec++;
+                matriz[i].nvecinos++;
+                matriz[i].vecinos[contadorvec] = j;
+            }
         }
     }
     for(i=1;i<=nceldas;i++){
@@ -395,7 +401,6 @@ void crear_matriz(){
 			matriz[i].y -= 0.5;
 		}
     }
-
     /*printf("\n%f %f",w,l);
     for(i=1;i<=nceldas;i++){
         printf("\n%4.0i %4.3f %4.3f %4.3f",i,matriz[i].x,matriz[i].y,matriz[i].z);
@@ -405,7 +410,7 @@ void crear_matriz(){
     dat=fopen(salidac,"w");
     for(i=1;i<=nceldas;i++){
         fprintf(dat,"\n%3.0i    ",i);
-        for(j=1;j<=27;j++){
+        for(j=1;j<=matriz[i].nvecinos;j++){
         	fprintf(dat,"%4.0i",matriz[i].vecinos[j]);
 		}
     }
@@ -529,7 +534,7 @@ void posiciones_iniciales(){
                 part[n].x = i;
                 part[n].y = j;
                 part[n].z = k;
-                for(i1=1;i1<=14;i1++){
+                for(i1=1;i1<=150;i1++){
 					if(matriz[ numcelda(n) ].particulas[i1]==0){
 						matriz[ numcelda(n) ].particulas[i1] = n;
 						//printf("\n %i	%i",numcelda(n),matriz[ numcelda(n) ].particulas[i1]);
@@ -714,7 +719,6 @@ void esferas_duras(void){
                     printf("\nn1: %i i: %i j: %i d: %f",n1,i,j,distancia(i,j));
                     imprimir_celda( numcelda(i) );
                     imprimir_celda( numcelda(j) );
-                    getchar();
                     rechazo = 1;
                     //rechazo_esf_mov++;
                     particulasobrepuesta=1;
@@ -867,6 +871,53 @@ float distanciacelda(int a,int b){
     return(dist2);
 }
 ////////////////////////////////////////////////////////////////////////////////////
+float distanciapartcel(int a,int b){
+    float dist2, xx, yy;//, zz;
+
+    if(fabs(part[a].x-matriz[b].x)>(w/2.0)){
+        if((part[a].x-matriz[b].x)>0){
+            xx = matriz[b].x + w;
+        }
+        else{
+            xx = matriz[b].x - w;
+        }
+    }
+    else
+    {
+        xx = matriz[b].x;
+    }
+
+    if(fabs(part[a].y-matriz[b].y)>(w/2.0)){
+        if((part[a].y-matriz[b].y)>0){
+            yy = matriz[b].y + w;
+        }
+        else{
+            yy = matriz[b].y - w;
+        }
+    }
+    else
+    {
+        yy = matriz[b].y;
+    }
+    /*if(fabs(matriz[a].z-matriz[b].z)>((l-1)/2.0)){
+        if((matriz[a].z-matriz[b].z)>0){
+            zz = matriz[b].z + (l-1);
+        }
+        else
+        {
+            zz = matriz[b].z - (l-1);
+        }
+    }
+    else
+    {
+        zz = matriz[b].z;
+    }*/
+
+    //dist2 = sqrt(pow(matriz[a].x-xx,2)+pow(matriz[a].y-yy,2)+pow(matriz[a].z-zz,2));
+    dist2 = sqrt(pow(part[a].x-xx,2)+pow(part[a].y-yy,2)+pow(part[a].z-matriz[b].z,2));
+    return(dist2);
+}
+////////////////////////////////////////////////////////////////////////////////////
 float distanciaz(int a,int b){
     float distz;
 
@@ -883,6 +934,14 @@ float distanciazcelda(int a,int b){
     return(distz);
 }
 ////////////////////////////////////////////////////////////////////////////////////
+float distanciazpartcel(int a,int b){
+    float distz;
+
+    distz = fabs(part[a].z - matriz[b].z);
+
+    return(distz);
+}
+////////////////////////////////////////////////////////////////////////////////////
 int signo(float a){
     int sign;
     if(a>=0){
@@ -894,6 +953,15 @@ int signo(float a){
     return(sign);
 }
 ////////////////////////////////////////////////////////////////////////////////////
+int maximo(int a,int b){
+    if(a>=b){
+        return(a);
+    }
+    else{
+        return(b);
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////
 void intercambiar(int a, int b){
     part[0]=part[a];
     part[a]=part[b];
@@ -901,36 +969,22 @@ void intercambiar(int a, int b){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 float de_mov(void){
-    int i,j,k,k1,sonvecinos=0,n1celda,n0celda;
+    int i,j,k,k1,sonvecinos=0,n1celda,n0celda,vecmax;
     int contadorvec_i=1, contadorvec_f=1;
     float eicoul = 0, efcoul = 0, eisig = 0, efsig = 0, elai = 0, elaf = 0;
     float d, z, r1, r2;
     float dem;
 
-    ///////////////////////////////////////0
-
 	n1celda = numcelda(n1);
 	n0celda = numcelda(0);
+	vecmax = maximo(matriz[ n0celda ].nvecinos,matriz[ n1celda ].nvecinos);
 	for(i=1;i<=matriz[ n1celda ].nvecinos;i++){
         if(matriz[n1celda].vecinos[i]==n0celda){
             sonvecinos = 1;
         }
 	}
 
-	/*printf("\nn1: %i Celdas vecinas a la celda n0celda: %i \n",n1,n0celda);
-	for(i=1;i<=matriz[n0celda].nvecinos;i++){
-        if(matriz[matriz[n0celda].vecinos[i]].nparticulas!=0)imprimir_celda(matriz[n0celda].vecinos[i]);
-        else printf("%i,",matriz[n0celda].vecinos[i]);
-	}
-	printf("\n\nn1: %i Celdas vecinas a la celda n1celda: %i \n",n1,n1celda);
-	for(i=1;i<=matriz[n1celda].nvecinos;i++){
-        if(matriz[matriz[n1celda].vecinos[i]].nparticulas!=0)imprimir_celda(matriz[n1celda].vecinos[i]);
-        else printf("%i,",matriz[n1celda].vecinos[i]);
-	}
-	getchar();*/
-
-    //printf("\n\n\nParticulas con las que hizo el calculo para 0:\n");
-    for(j=1;j<=matriz[ n0celda ].nvecinos;j++){
+    for(j=1;j<=vecmax;j++){
         if(matriz[ n0celda ].vecinos[j]!=0){
             if(matriz[ matriz[ n0celda ].vecinos[j] ].nparticulas!=0){
                 for(i=1;i<=matriz[ matriz[ n0celda ].vecinos[j] ].nparticulas;i++){
@@ -939,19 +993,8 @@ float de_mov(void){
                         d = distancia(0,ni);
                         if(d<1.0){
 							rechazo = 1;
-							/*printf("\n\nTRASLAPE 0 ni: %i",ni);
-							imprimir_particula(0);
-							//printf("\nSi hizo algo, creo(8");
-							esferas_duras_part(0);
-							getchar();*/
-                            //printf("\nDistancia d: %f",d);
-                            //printf("\nn1: %i x: %f y: %f z: %f",n1,part[n1].x,part[n1].y,part[n1].z);
-                            //printf("\nni: %i x: %f y: %f z: %f",ni,part[ni].x,part[ni].y,part[ni].z);
-                            //getchar();
                             return(0);
-                            //break;
                         }
-                        //printf("%i,",ni);
                         z = distanciaz(0,ni);
                         r1 = sqrt(0.5+pow((z)/(w*1.0),2));
                         r2 = sqrt(0.25+pow((z)/(w*1.0),2));
@@ -962,10 +1005,6 @@ float de_mov(void){
                 }
             }
         }
-        //if(rechazo==1)break;
-    }
-    //printf("\nParticulas con las que hizo el calculo para n1:\n");
-    for(j=1;j<=matriz[ n1celda ].nvecinos;j++){
         if(matriz[ n1celda ].vecinos[j]!=0){
             if(matriz[ matriz[ n1celda ].vecinos[j] ].nparticulas!=0){
                 for(i=1;i<=matriz[ matriz[ n1celda ].vecinos[j] ].nparticulas;i++){
@@ -974,19 +1013,8 @@ float de_mov(void){
                         d = distancia(n1,ni);
                         if(d<1.0){
                             rechazo = 1;
-							/*printf("\n\nTRASLAPE n1:%i ni: %i",n1,ni);
-							imprimir_particula(n1);
-							//printf("\nSi hizo algo, creo(8");
-							esferas_duras_part(n1);
-                            getchar();*/
-                            //printf("\nDistancia d: %f",d);
-                            //printf("\nn1: %i x: %f y: %f z: %f",n1,part[n1].x,part[n1].y,part[n1].z);
-                            //printf("\nni: %i x: %f y: %f z: %f",ni,part[ni].x,part[ni].y,part[ni].z);
-                            //getchar();
                             return(0);
-							//break;
                         }
-                        //printf("%i,",ni);
                         z = distanciaz(n1,ni);
                         r1 = sqrt(0.5+pow((z)/(w*1.0),2));
                         r2 = sqrt(0.25+pow((z)/(w*1.0),2));
@@ -997,25 +1025,21 @@ float de_mov(void){
                 }
             }
         }
-        //if(rechazo==1)break;
     }
-    //printf("\nCeldas con las que hizo el calculo para 0:\n");
     for(i=1;i<=nceldas;i++){
         if(matriz[ n0celda ].vecinos[ contadorvec_i ]!=i){
             if((matriz[i].carga!=0)&&(i!=n1celda)){
-                d = distanciacelda(ncvi, i);
+                d = distanciapartcel(0,i);
                 if(i == n0celda){
-                    printf("\nVete a la roña pues v: 0");
-                    getchar();
+                    /*printf("\nVete a la roña pues v: 0");
+                    getchar();*/
                 }
-      //          printf("%i,",i);
-                z = distanciazcelda( ncvi, i);
+                z = distanciazpartcel(0,i);
                 r1 = sqrt(0.5+pow((z)/(w*1.0),2));
                 r2 = sqrt(0.25+pow((z)/(w*1.0),2));
 
                 //eicoul += (qe*qe*matriz[ncvi].carga*matriz[i].carga)/(4*pi*epce*epsi*d*esc);
                 //elai += ((-qe*qe*matriz[ncvi].carga*matriz[i].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
-
                 eicoul += (qe*qe*part[0].carga*matriz[i].carga)/(4*pi*epce*epsi*d*esc);
                 elai += ((-qe*qe*part[0].carga*matriz[i].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
             }
@@ -1023,18 +1047,14 @@ float de_mov(void){
         else{
             contadorvec_i++;
         }
-    /*}
-    //printf("\nCeldas con las que hizo el calculo para n1:\n");
-    for(i=1;i<=nceldas;i++){*/
         if(matriz[ n1celda ].vecinos[ contadorvec_f ]!=i){
             if((matriz[i].carga!=0)&&(i!=n0celda)){
-                d = distanciacelda(ncnf, i);
+                d = distanciapartcel(n1,i);
                 if(i == n1celda){
-                    printf("\nVete a la roña pues v: n1");
-                    getchar();
+                    /*printf("\nVete a la roña pues v: n1");
+                    getchar();*/
                 }
-      //          printf("%i,",i);
-                z = distanciazcelda( ncnf, i);
+                z = distanciazpartcel(n1,i);
                 r1 = sqrt(0.5+pow((z)/(w*1.0),2));
                 r2 = sqrt(0.25+pow((z)/(w*1.0),2));
 
@@ -1049,8 +1069,8 @@ float de_mov(void){
         }
     }
     if(sonvecinos==0){
-        d = distanciacelda( ncvi, ncni);
-        z = distanciazcelda( ncvi, ncni);
+        d = distanciapartcel(0,ncni);
+        z = distanciazpartcel(0,ncni);
         r1 = sqrt(0.5+pow((z)/(w*1.0),2));
         r2 = sqrt(0.25+pow((z)/(w*1.0),2));
 
@@ -1059,8 +1079,8 @@ float de_mov(void){
         eicoul += (qe*qe*part[0].carga*matriz[ncni].carga)/(4*pi*epce*epsi*d*esc);
         elai += ((-qe*qe*part[0].carga*matriz[ncni].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
 
-        d = distanciacelda( ncnf, ncvf);
-        z = distanciazcelda( ncnf, ncvf);
+        d = distanciapartcel( n1, ncvf);
+        z = distanciazpartcel( n1, ncvf);
         r1 = sqrt(0.5+pow((z)/(w*1.0),2));
         r2 = sqrt(0.25+pow((z)/(w*1.0),2));
 
@@ -1068,28 +1088,12 @@ float de_mov(void){
         //elaf += ((-qe*qe*matriz[ncnf].carga*matriz[ncvf].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
         efcoul += (qe*qe*part[n1].carga*matriz[ncvf].carga)/(4*pi*epce*epsi*d*esc);
         elaf += ((-qe*qe*part[n1].carga*matriz[ncvf].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
-        //printf(" y n1 con 0 v:");
     }
-    //getchar();
-
     eisig = (part[0].carga*sigma*part[0].z*qe*esc)/(2*epce*epsi);
     efsig = (part[n1].carga*sigma*part[n1].z*qe*esc)/(2*epce*epsi);
     dem = efcoul + efsig + elaf - eicoul - eisig - elai;
-
-
-    //if(rechazo==1) return(0);
-	//dem = 0;
-
-	//if(p%1000==0){
-	//if(particulainmovil==1){
-    //if((fabs(efcoul)>=1e-19)||(fabs(eicoul)>=1e-19)){
-    //if((fabs(elai)<=1e-20)||(fabs(elaf)<=1e-20)){
-        ////printf("\n matriz eic: %e elai: %e eis: %e efc: %e elaf: %e efs: %e de: %e",eicoul,elai,eisig,efcoul,elaf,efsig,dem);
-        //calcular_de_mov();
-    //}
-	//}
-	//}
-
+    //printf("\n matriz eic: %e elai: %e eis: %e efc: %e elaf: %e efs: %e de: %e",eicoul,elai,eisig,efcoul,elaf,efsig,dem);
+    //calcular_de_mov();
     return(dem);
 }
 ////////////////////////////////////////////////////////////////////////////////////
@@ -1133,7 +1137,7 @@ float calcular_de_mov(){
     efsig = (part[n1].carga*sigma*part[n1].z*qe*esc)/(2*epce*epsi);
     dem = efcoul + efsig + elaf - eicoul - eisig - elai;
 
-    printf("\nclasica eic: %e elai: %e eis: %e efc: %e elaf: %e efs: %e de: %e",eicoul,elai,eisig,efcoul,elaf,efsig,dem);
+    //printf("\nclasica eic: %e elai: %e eis: %e efc: %e elaf: %e efs: %e de: %e",eicoul,elai,eisig,efcoul,elaf,efsig,dem);
     //getchar();
 
     return(dem);
