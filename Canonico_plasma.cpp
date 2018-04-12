@@ -21,8 +21,6 @@ void leer_datos_iniciales(void);
 void imprimir_datos_iniciales(void);
 void imprimir_celda(int a);
 void imprimir_particula(int a);
-void imprimir_celda_f(int a);
-void imprimir_particula_f(int a);
 void condiciones_iniciales(void);
 void crear_matriz(void);
 void crear_matriz2(void);
@@ -45,17 +43,11 @@ int numcelda(int a);
 int numcelda2(int a);
 void elegir_particula(void);
 void mover(void);
-void insertar_particulas(void);
-void sustraer_particulas(void);
 void metropolis_mov(void);
-void metropolis_insertar(void);
-void metropolis_sustraer(void);
 
-float de_insus(int a, int b);
 float de_mov(void);
 float calcular_de_mov(void);
 
-float encuentrab(void);
 void sumas(void);
 void gdr(void);
 void salida(void);
@@ -83,7 +75,7 @@ long sumapx, sumapy, sumapz;
 long sumanx, sumany, sumanz;
 ///////////////////////////////////////////////////////////////////////Variables para verificar
 int mis;
-float dxx,dyy,dzz;
+float dxx,dyy,dzz,drho,dphi;
 int siestaenlosvecinos=0;
 int particulainmovil=0;
 int particulasobrepuesta=0;
@@ -99,8 +91,10 @@ long dgdrpz[clases+1], dgdrnz[clases+1];
 
 struct particulas{
     float x,y,z;
+    float rho,phi;
     int carga,inmovilidad;
 }part[MAXPART+1];
+
 //int matriz[15][15][30][1][27][1][15][1];//x,y,z,#matriz,vecinos,#part,listapart,carga
 struct smatriz{
 	float x,y,z;
@@ -112,7 +106,7 @@ struct smatriz{
 int nmatriz[50][50][50];
 
 struct smatriz2{
-	float x,y,z;
+	float rho,phi;
 	int carga,nparticulas,nvecinos;
 	int vecinos[28];
 	int particulas[1500];
@@ -139,12 +133,11 @@ main(){
 	posiciones_iniciales();
 	salidageo();
 
-	part[1000].x = 0.8;
-    part[1000].y = 0.4;
-    part[1000].x = part[1000].x*1000000;
-    part[1000].y = part[1000].y*1000000;
+	part[1000].rho = 2.5;
+    part[1000].phi = (pi*0.25)*0.5;
+    part[1000].rho = part[1000].rho*1000000;
 
-    printf("\nparticula 1000\n x: %f y: %f ncelda2: %i",part[1000].x,part[1000].y,numcelda2(1000));
+    printf("\nparticula 1000\n rho: %f phi: %f ncelda2: %i",part[1000].rho,part[1000].phi,numcelda2(1000));
     getchar();
 
 	/*part[0].x = 0.5;
@@ -168,7 +161,7 @@ main(){
     printf("\nner: %f nnr: %f Volumen: %e  B: %f ",ner, nnr, volumen, B);
     printf("\ndistrmp: %f distrmn: %f", distrmp, distrmn);
 
-    if(lngamma==0) B = encuentrab();
+    //if(lngamma==0) B = encuentrab();
     for(i=0;i<=clases;i++){
         dgdrpx[i]=dgdrpy[i]=dgdrpz[i]=dgdrnx[i]=dgdrny[i]=dgdrnz[i]=0;
     }
@@ -189,51 +182,33 @@ main(){
         rechazo = 0;
         //if(p%1==0)esferas_duras();
 
-        if(alea()<1.8&&npart>0){
-            mis = 1;
-            c_mov++;
-            elegir_particula();
-            mover();
-            condiciones_periodicas();
-
-            if((part[n1].inmovilidad>=15000)&&(p>=-1000000)){
-                //printf("\nLa particula %i está inmovil",n1);
-                //printf("\nx: %f y: %f z: %f carga: %i",part[0].x, part[0].y, part[0].z, part[0].carga);
-                //printf("\ndxx: %f dyy: %f dzz: %f",dxx,dyy,dzz);
-                //imprimir_particula(0);
-                //imprimir_particula(n1);
-                //esferas_duras_part(n1);
-
-                particulainmovil=1;
-            }
-            else{
-                particulainmovil=0;
-            }
-
-            if(rechazo == 0){
-                metropolis_mov();
-            }
-            else{
-                rechazo_per++;
-                part[n1] = part[0];
-                //printf("\n\nSe rechazo el movimiento por condiciones periodicas.");
-            }
-            //getchar();
+        c_mov++;
+        elegir_particula();
+        mover();
+        condiciones_periodicas();
+        if((part[n1].inmovilidad>=1500)&&(p>=-1000000)){
+            //printf("\nLa particula %i está inmovil",n1);
+            //printf("\nx: %f y: %f z: %f carga: %i",part[0].x, part[0].y, part[0].z, part[0].carga);
+            //printf("\ndxx: %f dyy: %f dzz: %f",dxx,dyy,dzz);
+            //imprimir_particula(0);
+            //imprimir_particula(n1);
+            //esferas_duras_part(n1);
+            particulainmovil=1;
         }
         else{
-            if(alea()<0.5&&nn>=1){
-                mis = 2;
-                c_sus++;
-                sustraer_particulas();
-                metropolis_sustraer();
-            }
-            else{
-                mis = 3;
-                c_ins++;
-                insertar_particulas();
-                metropolis_insertar();
-            }
+            particulainmovil=0;
         }
+
+        if(rechazo == 0){
+            metropolis_mov();
+        }
+        else{
+            rechazo_per++;
+            part[n1] = part[0];
+            //printf("\n\nSe rechazo el movimiento por condiciones periodicas.");
+        }
+        //getchar();
+
         cargatotal=0;
         for(i=1;i<=nceldas;i++){
             cargatotal += matriz[i].carga;
@@ -419,7 +394,7 @@ void crear_matriz(){
 ////////////////////////////////////////////////////////////////////////////////////
 void crear_matriz2(){
     int i,j,contadorm=0,contadorvec=0;
-    float xx, yy;
+    //float rr, pp;
     r = 60000000;                                                                   //Radio en cm, todo lo demas en nm
     contadorm++;
     nmatriz2[1][1] = 1;
@@ -427,22 +402,22 @@ void crear_matriz2(){
         for(j=1;j<=(int)((pi*i)*0.25);j++){
             contadorm++;
             nmatriz2[i][j] = contadorm;
-            matriz2[contadorm].x = i;
-            matriz2[contadorm].y = j;
+            matriz2[contadorm].rho = i;
+            matriz2[contadorm].phi = j;
         }
     }
     nceldas=contadorm;
     for(i=1;i<=nceldas;i++){
         contadorvec = 0;
-        for(j=1;j<=nceldas;j++){
-            xx = matriz2[j].x; yy = matriz2[j].y;
-            if(matriz2[i].y == 1){
-                if(yy==(int)((pi*matriz2[j].x)*0.25)){
+        /*for(j=1;j<=nceldas;j++){
+            rr = matriz2[j].rho; pp = matriz2[j].phi;
+            if(matriz2[i].phi == 1){
+                if(pp==(int)((pi*matriz2[j].rho)*0.25)){
 
                 }
             }
 
-        }
+        }*/
         contadorvec++;
         matriz2[i].nvecinos++;
         matriz2[i].vecinos[contadorvec] = i;
@@ -456,14 +431,6 @@ void crear_matriz2(){
 		}
     }
     fclose(dat);
-    /*struct smatriz2{
-        float x,y,z;
-        int carga,nparticulas,nvecinos;
-        int vecinos[28];
-        int particulas[1500];
-    }matriz2[61*50+1];
-
-    int nmatriz2[60+1][50];*/
 }
 ////////////////////////////////////////////////////////////////////////////////////
 int numcelda(int a){
@@ -471,13 +438,12 @@ int numcelda(int a){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 int numcelda2(int a){
-    float rn;
     int fraccion;
-    rn = sqrt( pow(part[a].x,2) + pow(part[a].y,2) );
-    fraccion =  (int)(((int)(rn/(1000000))+1)*pi*0.25);
-    printf("\nrn: %f fraccion: %i entrada1: %i entrada2: %i",rn,fraccion,(int)(rn/(1000000))+1,(int)( fraccion*atan(part[a].y/part[a].x)/(0.25*pi) )+1);
+
+    fraccion =  (int)(((int)(part[a].rho/(1000000))+1)*pi*0.25);
+    //printf("\nrn: %f fraccion: %i entrada1: %i entrada2: %i",part[a].rho,fraccion,(int)(part[a].rho/(1000000))+1,(int)( fraccion*part[a].phi/(0.25*pi) )+1 );
     if( fraccion >= 1 ){
-        return( nmatriz2[ (int)(rn/(1000000))+1 ][ (int)( fraccion*atan(part[a].y/part[a].x)/(0.25*pi) )+1 ] );
+        return( nmatriz2[ (int)(part[a].rho/(1000000))+1 ][ (int)( fraccion*part[a].phi/(0.25*pi) )+1 ] );
     }
     else{
         return( nmatriz2[1][1] );
@@ -531,8 +497,10 @@ void posiciones_iniciales(){
             for(k=1;k<=(l-1);k++){
                 if(n>=npart)break;
                 n++;
-                part[n].x = i;
-                part[n].y = j;
+                part[n].rho = sqrt(i*i+j*j);
+                part[n].phi = atan2(j,i);
+                part[n].x = part[n].rho*cos(part[n].phi);
+                part[n].y = part[n].rho*sin(part[n].phi);
                 part[n].z = k;
                 for(i1=1;i1<=150;i1++){
 					if(matriz[ numcelda(n) ].particulas[i1]==0){
@@ -548,17 +516,25 @@ void posiciones_iniciales(){
 
 				if(n<=np){
                     part[n].carga = v1;
+                    part[n].carga = v1;
                 }
                 else{
+                    part[n].carga = v2;
                     part[n].carga = v2;
                 }
 
                 matriz[ numcelda(n) ].nparticulas++;
                 matriz[ numcelda(n) ].carga+=part[n].carga;
+                matriz2[ numcelda2(n) ].nparticulas++;
+                matriz2[ numcelda2(n) ].carga+=part[n].carga;
 
             }
         }
     }
+    for(i=1;i<=npart;i++){
+        printf("\npart: %i rho: %f phi: %f x: %f y: %f z: %f",i,part[i].rho,part[i].phi,part[i].x,part[i].y,part[i].z);
+    }
+    getchar();
     for(i=1;i<=nceldas;i++){
         posicion_promedio_celda(i);
     }
@@ -576,28 +552,39 @@ void posiciones_iniciales(){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void elegir_particula(void){
-    //if(particulasobrepuesta==0){
     n1 = int(npart*alea())+1;
     if(n1==npart+1)n1=npart;
     part[n1].inmovilidad++;
-    //}
-    /*printf("\n\n\nSe eligio la particula n1: %i",n1);
-    imprimir_particula(n1);
-    imprimir_celda(numcelda(n1));*/
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void mover(void){
-    //if(particulasobrepuesta==0){
     dxx = (alea()-0.5)*dx;
     dyy = (alea()-0.5)*dy;
     dzz = (alea()-0.5)*dz;
 
+    dxx = alea()*5.0;
+    dyy = alea()*2*pi;
+
+    //drho = (alea()-0.5)*1.0;
+    //dphi = (alea()-0.5)*pi*0.625;
+
     part[0] = part[n1];
 
-    part[n1].x += dxx;//(alea()-0.5)*dx;
-    part[n1].y += dyy;//(alea()-0.5)*dy;
+    //part[n1].x += dxx;//(alea()-0.5)*dx;
+    //part[n1].y += dyy;//(alea()-0.5)*dy;
+
+    part[n1].x += dxx*cos(dyy);
+    part[n1].y += dxx*sin(dyy);
+
+    //part[n1].rho += drho;
+    //part[n1].phi += dphi;
+
+    //part[n1].x = part[n1].rho*cos(part[n1].phi);
+    //part[n1].y = part[n1].rho*sin(part[n1].phi);
+
     part[n1].z += dzz;//(alea()-0.5)*dz;
-    //}
+    //part[n1].rho = sqrt(part[n1].x*part[n1].x+part[n1].y*part[n1].y);
+    //part[n1].phi = atan(part[n1].y/part[n1].x);
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void condiciones_periodicas(void){
@@ -633,13 +620,7 @@ void condiciones_periodicas(void){
         }
 
         posicion_promedio_celda(ncvf);
-
-        matriz[ncvi].x = part[0].x;
-        matriz[ncvi].y = part[0].y;
-        matriz[ncvi].z = part[0].z;
-        matriz[ncnf].x = part[n1].x;
-        matriz[ncnf].y = part[n1].y;
-        matriz[ncnf].z = part[n1].z;
+        posicion_promedio_celda(ncnf);
     }
     /*printf("\n\nSe movio la particula %i a la nueva posicion",n1);
     imprimir_particula(n1);
@@ -660,7 +641,6 @@ void condiciones_periodicas2(void){
         part[n1].x = (part[n1].x+part[n1].y)/sqrt(2);
         part[n1].y = (-part[n1].x+part[n1].y)/sqrt(2);
     }
-
     //if((part[n1].z<0.5)||(part[n1].z>=(l-0.5))){
     if( (r_part > 6000000 )||(part[n1].x<0)||(part[n1].y<-part[n1].x) ){
         rechazo = 1;
@@ -688,13 +668,7 @@ void condiciones_periodicas2(void){
         }
 
         posicion_promedio_celda(ncvf);
-
-        matriz[ncvi].x = part[0].x;
-        matriz[ncvi].y = part[0].y;
-        matriz[ncvi].z = part[0].z;
-        matriz[ncnf].x = part[n1].x;
-        matriz[ncnf].y = part[n1].y;
-        matriz[ncnf].z = part[n1].z;
+        posicion_promedio_celda(ncnf);
     }
     /*printf("\n\nSe movio la particula %i a la nueva posicion",n1);
     imprimir_particula(n1);
@@ -705,26 +679,7 @@ void condiciones_periodicas2(void){
 void esferas_duras(void){
     int i,j;
     for(i=1;i<=npart;i++){
-        for(j=1;j<=npart;j++){
-            if(i>j){
-                if(distancia(i,j)<1){
-
-                    /*printf("\nparticulas %i y %i pegadas d: %f paso: %i",i,j,distancia(i,j),p);
-                    printf("\ni x: %f y: %f z: %f celda: %i",part[i].x,part[i].y,part[i].z,numcelda(i));
-                    printf(" x: %f y: %f z: %f",matriz[numcelda(i)].x,matriz[numcelda(i)].y,matriz[numcelda(i)].z);
-                    printf("\ni x: %f y: %f z: %f celda: %i",part[j].x,part[j].y,part[j].z,numcelda(j));
-                    printf(" x: %f y: %f z: %f",matriz[numcelda(j)].x,matriz[numcelda(j)].y,matriz[numcelda(j)].z);
-                    printf("\n dxx: %f dyy: %f dzz: %f",dxx,dyy,dzz);
-                    */
-                    printf("\nn1: %i i: %i j: %i d: %f",n1,i,j,distancia(i,j));
-                    imprimir_celda( numcelda(i) );
-                    imprimir_celda( numcelda(j) );
-                    rechazo = 1;
-                    //rechazo_esf_mov++;
-                    particulasobrepuesta=1;
-                }
-            }
-        }
+        esferas_duras_part(i);
     }
     if(rechazo==1)getchar();
 }
@@ -737,6 +692,8 @@ void esferas_duras_part(int a){
                 printf("\nn1: %i a: %i i: %i d: %f",n1,a,i,distancia(a,i));
                 imprimir_celda( numcelda(a) );
                 imprimir_celda( numcelda(i) );
+                rechazo=1;
+                particulasobrepuesta=1;
             }
         }
     }
@@ -757,21 +714,7 @@ void imprimir_celda(int a){
 void imprimir_particula(int a){
     printf("\nParticula: %i x: %f y: %f z: %f carga: %i",a,part[a].x,part[a].y,part[a].z,part[a].carga);
 }
-////////////////////////////////////////////////////////////////////////////////////
-void imprimir_celda_f(int a){
-    int i;
 
-    fprintf(dat,"\n\nCelda: %i x: %f y: %f z: %f carga: %i npart: %i",a,matriz[a].x,matriz[a].y,matriz[a].z,matriz[a].carga,matriz[a].nparticulas);
-    for(i=1;i<=matriz[a].nparticulas;i++){
-        imprimir_particula_f( matriz[a].particulas[i] );
-    }
-    //printf("\n");
-
-}
-////////////////////////////////////////////////////////////////////////////////////
-void imprimir_particula_f(int a){
-    fprintf(dat,"\nParticula: %i x: %f y: %f z: %f carga: %i",a,part[a].x,part[a].y,part[a].z,part[a].carga);
-}
 ////////////////////////////////////////////////////////////////////////////////////
 float distancia(int a,int b){
     float dist2, xx, yy;//, zz;
@@ -1172,7 +1115,6 @@ void metropolis_mov(void){
 
     if(rechazo==0){
         if(emet>zeta){
-            posicion_promedio_celda(ncnf);
             matriz[ numcelda(n1) ] = matriz[ncnf];
             matriz[ numcelda(0) ] = matriz[ncvf];
             c_mova++;
@@ -1291,288 +1233,4 @@ dat=fopen(salidac,"w");
         fprintf(dat,"}]");
         fclose(dat);
 //printf("\n mp: %i mn: %i \n", mp, mn);
-}
-////////////////////////////////////////////////////////////////////////////////////
-float de_insus(int a, int b){
-    int i;
-    float de, ecoul = 0, esiga = 0, esigb = 0, ela = 0;
-    float d, z, r1, r2;
-
-    d = distancia(a,b);
-    if(d<1.0){
-        //printf("TRASLAPE ENTRE A Y B  a: %i b: %i d: %f",a,b,d);
-        //getchar();
-        rechazo = 1;
-        return(0);
-    }
-
-    z = distanciaz(a,b);
-    r1 = sqrt(0.5+pow((z)/(w*1.0),2));
-    r2 = sqrt(0.25+pow((z)/(w*1.0),2));
-
-    ecoul += (qe*qe*part[a].carga*part[b].carga)/(4*pi*epce*epsi*d*esc);
-    ela += ((-qe*qe*part[a].carga*part[b].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
-
-
-    for(i=1;i<=npart;i++){
-        if(i!=a&&i!=b){
-            d = distancia(a,i);
-            if(d<1.0){
-                //printf("TRASLAPE i: %i a: %i d: %f",i,a,d);
-				//getchar();
-            	rechazo = 1;
-                return(0);
-            }
-
-            z = distanciaz(a,i);
-            r1 = sqrt(0.5+pow((z)/(w*1.0),2));
-            r2 = sqrt(0.25+pow((z)/(w*1.0),2));
-
-            ecoul += (qe*qe*part[a].carga*part[i].carga)/(4*pi*epce*epsi*d*esc);
-            ela += ((-qe*qe*part[a].carga*part[i].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
-
-            d = distancia(b,i);
-            if(d<1.0){
-                //printf("TRASLAPE i: %i b: %i d: %f",i,b,d);
-                //getchar();
-                rechazo = 1;
-                return(0);
-            }
-            z = distanciaz(b,i);
-            r1 = sqrt(0.5+pow((z)/(w*1.0),2));
-            r2 = sqrt(0.25+pow((z)/(w*1.0),2));
-
-
-            ecoul += (qe*qe*part[b].carga*part[i].carga)/(4*pi*epce*epsi*d*esc);
-            ela += ((-qe*qe*part[b].carga*part[i].carga)/(pi*epce*epsi*w*w*esc*esc))*(w*esc*log((0.5+r1)/(r2))+z*esc*atan((4*z*esc*r1)/(w*esc)));
-
-        }
-    }
-
-    esiga = (part[a].carga*sigma*part[a].z*qe*esc)/(2*epce*epsi);
-    esigb = (part[b].carga*sigma*part[b].z*qe*esc)/(2*epce*epsi);
-    de = esiga+esigb+ela+ecoul;
-	/*if(p>=000){
-			if(c==1){
-	        printf("\nSUS ");
-	    }
-	    else{
-	        printf("\nINS ");
-	    }
-		printf("esiga: %e esigb: %e ecoul: %e de: %e",esiga, esigb, ecoul, de);
-		getchar();
-	}*/
-    return(de);
-}
-////////////////////////////////////////////////////////////////////////////////////
-void sustraer_particulas(){
-    n1 = (int)(np*alea()+1);
-    if(n1==np+1) n1 = np;
-    n2 = (int)(nn*alea()+1);
-    if(n2==nn+1) n2 = nn;
-    n2+=np;
-}
-////////////////////////////////////////////////////////////////////////////////////
-void metropolis_sustraer(){
-    float argexp, emet, factor;
-
-    argexp = -B + de_insus(n1,n2)/(kb*tempe);
-    factor = np*nn;
-
-    if(argexp>=100){
-        emet = 2.0;
-    }
-    else{
-        emet = factor*exp(argexp);
-    }
-    if(emet>alea()&&rechazo==0){
-        c_susa++;
-        intercambiar(n1,npart);
-        intercambiar(n1,np);
-        intercambiar(n2,npart-1);
-        np-=1;
-        nn-=1;
-        npart=np+nn;
-    }
-}
-////////////////////////////////////////////////////////////////////////////////////
-void insertar_particulas(){
-    //if(npart+2<=MAXPART){
-        part[npart+1].x = alea()*w;
-        if(part[npart+1].x==w) part[npart+1].x = 0;
-        part[npart+1].y = alea()*w;
-        if(part[npart+1].y==w) part[npart+1].y = 0;
-        part[npart+1].z = alea()*(l-1)+0.5;
-        if(part[npart+1].z==(l-0.5)) part[npart+1].z = 0.5;
-
-        part[npart+2].x = alea()*w;
-        if(part[npart+2].x==w) part[npart+2].x = 0;
-        part[npart+2].y = alea()*w;
-        if(part[npart+2].y==w) part[npart+2].y = 0;
-        part[npart+2].z = alea()*(l-1)+0.5;
-        if(part[npart+2].z==(l-0.5)) part[npart+2].z = 0.5;
-
-        part[npart+1].carga = v1;
-        part[npart+2].carga = v2;
-    //}
-}
-////////////////////////////////////////////////////////////////////////////////////
-void metropolis_insertar(){
-    float argexp, emet, factor;
-
-    argexp = B - de_insus(npart+1,npart+2)/(kb*tempe);
-    factor = 1/((np+1)*(nn+1)*1.0);
-
-    if(argexp>=100){
-        emet = 2.0;
-    }
-    else{
-        emet = factor*exp(argexp);
-    }
-    //printf("\nEXP %e de %e factor %e np %i nn %i",emet,de_insus(npart+1,npart+2,0),factor,np,nn);
-    //getchar();
-    if(rechazo==0){
-	    if(emet>alea()){
-	        c_insa++;
-			intercambiar(npart+1,np+1);
-	        np+=1;
-	        nn+=1;
-	        npart=np+nn;
-	        //printf("\nINSERTAR ACEPTADO");
-	        //getchar();
-	    }else{
-	    	rechazo_met++;
-		}
-	}
-	else{
-		rechazo_tras++;
-	}
-}
-////////////////////////////////////////////////////////////////////////////////////
-float encuentrab(){
-    int i,cont_prom=0,contador_b1=1,contador_b2=2;
-    int pr=0,salir=0,i_corte=10,clasei=0.5*clases+1,clasef=0.75*clases;
-    int actu_b=100000;
-    float db=0.5;
-    float sumadgdrpx,sumadgdrnx,sumadgdrpy,sumadgdrny,sumadgdrpz,sumadgdrnz;
-    float promediob,sumasg,promedio_b,sumasb;
-    float promediog[11]={0},promediobe[11]={0};
-
-    p=1;
-    printf("actu_be: %i\n",actu_b);
-    sprintf(salidac,"temp/be.dat");
-	dat=fopen(salidac,"w");
-	fprintf(dat,"B		Bprom		G		Gprom		lngammaprom");
-    fclose(dat);
-
-    //for(p=1;p<=50000000;p++){
-    while(salir==0){
-        rechazo = 0;
-        if(alea()<0.8&&npart>0){
-            c_mov++;
-            elegir_particula();
-            mover();
-            condiciones_periodicas();
-            if(rechazo == 0){
-                metropolis_mov();
-            }
-            else{
-                rechazo_per++;
-                part[n1] = part[0];
-            }
-        }
-        else{
-            if(alea()<0.5&&nn>=1){
-                c_sus++;
-                sustraer_particulas();
-                metropolis_sustraer();
-            }
-            else{
-                c_ins++;
-                insertar_particulas();
-                metropolis_insertar();
-            }
-        }
-        if(p%1000==0)printf("\r Paso %i",p);
-        if(p>terma){
-            pr++;
-            for(i=1;i<=npart;i++){
-                if(part[i].carga > 0 ){
-                    dgdrpx[(int)(part[i].x/(dw))+1]++;
-                    dgdrpy[(int)(part[i].y/(dw))+1]++;
-                    dgdrpz[(int)((part[i].z-0.5)/(dl))+1]++;
-                }
-                else
-                {
-                    dgdrnx[(int)(part[i].x/(dw))+1]++;
-                    dgdrny[(int)(part[i].y/(dw))+1]++;
-                    dgdrnz[(int)((part[i].z-0.5)/(dl))+1]++;;
-                }
-            }
-            if(p%actu_b==0){
-                cont_prom++;
-                if(cont_prom>i_corte) cont_prom=1;
-                contador_b1 = contador_b2;
-                sumadgdrpx=sumadgdrnx=sumadgdrpy=sumadgdrny=sumadgdrpz=sumadgdrnz=0;
-                //for(i=1;i<=clases;i++){
-                //for(i=0.5*clases+1;i<=clases*0.75;i++){
-                for(i=clasei;i<=clasef;i++){
-                    /*sumadgdrpx += dgdrpx[i];
-                    sumadgdrnx += dgdrnx[i];
-                    sumadgdrpy += dgdrpy[i];
-                    sumadgdrny += dgdrny[i];*/
-                    sumadgdrpz += dgdrpz[i];
-                    sumadgdrnz += dgdrnz[i];
-                }
-                //promediog[cont_prom] = (sumadgdrpx+sumadgdrnx+sumadgdrpy+sumadgdrny+sumadgdrpz+sumadgdrnz)/(6.0*distrmn*pr*clases);
-                promediog[cont_prom] = (sumadgdrpz+sumadgdrnz)/(2.0*distrmn*pr*(clasef-clasei));
-				promediobe[cont_prom] = B;
-                sumasg = 0;
-                sumasb = 0;
-                for(i=1;i<=i_corte;i++){
-                    sumasg += promediog[i];
-                    sumasb += promediobe[i];
-                }
-				if(p<=terma+i_corte*actu_b){
-                    promediob = sumasg/(1.0*cont_prom);
-                    promedio_b = sumasb/(1.0*cont_prom);
-				}
-				else{
-                    promediob = sumasg/(1.0*i_corte);
-                    promedio_b = sumasb/(1.0*i_corte);
-				}
-
-				sprintf(salidac,"temp/be.dat");
-				dat=fopen(salidac,"a");
-    			fprintf(dat,"\n%f	%f	%f	%f 	%f",B,promedio_b,promediog[cont_prom],promediob,(promedio_b-log(nnr*nnr))*0.5);
-
-                if(db<0.0001){
-                    printf("\nENCONTRO B! B = %f y entonces lngamma = %f",B,(B-log(nnr*nnr))*0.5);
-                    getchar();
-                    return(B);
-                }
-                else{
-                    if(promediob>1.0){
-                        contador_b2 = -1;
-                    }
-                    else{
-                        contador_b2 = 1;
-                    }
-                    if(contador_b2*contador_b1<0){
-                        if(contador_b1!=2)db = db/2;
-                    }
-                    //printf(" db: %f B: %f\n",contador_b2*db,B);
-
-                    printf("            B: %f db: %f prom: %f prombar: %f \n", B, contador_b2*db, promediog[cont_prom],promediob);
-                    B += contador_b2*db;
-                    for(i=0;i<=clases;i++){
-                        dgdrpx[i]=dgdrpy[i]=dgdrpz[i]=dgdrnx[i]=dgdrny[i]=dgdrnz[i]=0;
-                    }
-                    pr = 0;
-                }
-            }
-        }
-        p++;
-        fclose(dat);
-    }
 }
