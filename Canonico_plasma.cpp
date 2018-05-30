@@ -195,7 +195,7 @@ void calc_carga(int a){
 void arreglo_inicial(){
     int i,ni,dummy,res=1000;
 
-    dat = fopen("posiciones.dat","r");
+    dat = fopen("datos/posiciones.dat","r");
     for(i=1;i<=1407;i++){
         fscanf(dat,"%i\t%i\t%i\t%i\t%i\t%i\n",&dummy,&matriz_plasma[i].electrones,&matriz_plasma[i].h20,&matriz_plasma[i].hp,&matriz_plasma[i].h2p,&matriz_plasma[i].carga);
     }
