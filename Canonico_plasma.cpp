@@ -187,7 +187,8 @@ void crear_matriz_plasma(){
 
     contadorm=1;
     nmatriz_plasma[1][1] = 1;
-    matriz_plasma[1].rho = 1/sqrt(2);
+    //matriz_plasma[1].rho = 1/sqrt(2);
+    matriz_plasma[1].rho = 1-0.5;
     matriz_plasma[1].phi = pi/8;
     matriz_plasma[1].x = matriz_plasma[1].rho*cos(matriz_plasma[1].phi);
     matriz_plasma[1].y = matriz_plasma[1].rho*sin(matriz_plasma[1].phi);
@@ -197,7 +198,8 @@ void crear_matriz_plasma(){
         for(j=1;j<=(int)((pi*i)*0.25);j++){
             contadorm++;
             nmatriz_plasma[i][j]=contadorm;
-            matriz_plasma[contadorm].rho = sqrt(pow(i,2)+pow(i-1,2))/sqrt(2);
+            //matriz_plasma[contadorm].rho = sqrt(pow(i,2)+pow(i-1,2))/sqrt(2);
+            matriz_plasma[contadorm].rho = i-0.5;
             matriz_plasma[contadorm].phi = pi/(8*((int)((pi*i)*0.25)))+(j-1)*(pi/(4*((int)((pi*i)*0.25))));
             matriz_plasma[contadorm].x = matriz_plasma[contadorm].rho*cos(matriz_plasma[contadorm].phi);
             matriz_plasma[contadorm].y = matriz_plasma[contadorm].rho*sin(matriz_plasma[contadorm].phi);
@@ -425,8 +427,8 @@ void metropolis_plasma(int a){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void actu_salida(void){
-	int i;
-
+	int i, j;
+	float xx, yy;
     sprintf(salidac,"datos/posiciones.dat");
     dat=fopen(salidac,"w");
     for(i=1;i<=nceldas;i++){
@@ -444,8 +446,25 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"electrones\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
+        for(j=1;j<=8;j++){
+            //xx = (int)(matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4)*10)/10.0;
+            //yy = (int)(matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4)*10)/10.0;
+            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
+            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
+            //fprintf(dat,"%2.5f, %2.5f, %9.0i\n", matriz_plasma[i].x, matriz_plasma[i].y, matriz_plasma[i].electrones);
+            //fprintf(dat,"%f\t%f\t%i\n", matriz_plasma[i].x, matriz_plasma[i].y, matriz_plasma[i].electrones);
+            fprintf(dat,"%f\t%f\t%i\n", xx-0.05, yy-0.05, matriz_plasma[i].electrones);
+        }
+    }
+    fclose(dat);
+
+    sprintf(salidac,"datos/electron_polares.dat");
+    dat=fopen(salidac,"w");
+    //fprintf(dat, "\"x\", \"y\", \"electrones\"\n");
+    fprintf(dat, "#X\tY\tZ\n");
+    for(i=1;i<=nceldas;i++){
         //fprintf(dat,"%2.5f, %2.5f, %9.0i\n", matriz_plasma[i].x, matriz_plasma[i].y, matriz_plasma[i].electrones);
-        fprintf(dat,"%f\t%f\t%i\n", matriz_plasma[i].x, matriz_plasma[i].y, matriz_plasma[i].electrones);
+        fprintf(dat,"%f\t%f\t%i\n", matriz_plasma[i].rho, matriz_plasma[i].phi, matriz_plasma[i].electrones);
     }
     fclose(dat);
 
