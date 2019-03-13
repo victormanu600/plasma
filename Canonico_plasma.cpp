@@ -192,6 +192,14 @@ void condiciones_iniciales(){
     tempei = tempei*qe/kb;
     tempee = tempee*qe/kb;
 
+    printf("te: %f ti: %f",tempee,tempei);
+    getchar();
+    getchar();
+    getchar();
+    getchar();
+    getchar();
+    getchar();
+
     //printf("\ntempei: %f tempee: %f\n", tempei, tempee);
     //getchar();
 
@@ -224,6 +232,12 @@ void crear_matriz_plasma(){
         }
     }
     nceldas=contadorm;
+    printf("nceldas: %i",nceldas);
+    getchar();
+    getchar();
+    getchar();
+    getchar();
+    getchar();
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void calc_carga(int a){
@@ -767,7 +781,8 @@ void beta(void){
             nei += matriz_plasma[ nmatriz_plasma[i][j] ].electrones;
             nii += matriz_plasma[ nmatriz_plasma[i][j] ].h2p + matriz_plasma[ nmatriz_plasma[i][j] ].hp;
         }
-        beta_i = (2*muce*kb*8*(nei*tempee+nii*tempei))/(vol_i*pow(arreglo[186].absb[i]*1e-4,2));
+        beta_i = (2*muce*kb*8*(nei*tempee+nii*tempei))/(
+        vol_i*pow(arreglo[186].absb[i]*1e-4,2));
         if(beta_i<0){
             printf("\nmuce: %e npi: %I64d kb: %e tempee + tempeei: %e vol_i: %e |B_i|: %e",muce,npi,kb,tempee+tempei,vol_i,pow(arreglo[186].absb[i]*1e-4,1));
             //getchar();
