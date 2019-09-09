@@ -63,7 +63,9 @@ vector<float> cruz(vector<float> a, vector<float> b);
 void print_vector(vector<float> a);
 int celda_dir(int a);
 int celda_dir_rec(int a);
+int celda_dir_rec_error(int a);
 int celda_dir_rec_hp(int a);
+int celda_dir_rec_error_hp(int a);
 int celda_dir_rec_neg(int a);
 
 void printposiciones(int a);
@@ -73,6 +75,7 @@ int pasos, actu, terma, reso;
 float esc, densidad, volumen, nelectronesr, tempee, tempei;
 long long int nh20, nhp, nh2p, nelectrones, npart[4];
 float R;
+const int R_reso = 60*10*2+1;                   //Primer numero es R, segundo es reso, 2 es por que es de -R a R y +1 para comenzar los arreglos desde 1.
 float me, mh20, mh2p, mhp, masa[4], carga[4];
 ///////////////////////////////////////////////////////////////////////Variables globales
 int p=0, tipo, ienergia;
@@ -94,25 +97,24 @@ struct smatriz_plasma{
 	int carga;
 	float t[3];
 	long long int h20,hp,h2p,electrones;
-    float k1x, k1y, k1z, k2x, k2y, k2z;
 //}matriz_plasma[8*61*50+1];
 //}matriz_plasma[7*61*60+1];
 //}matriz_plasma[12346+10000];
-}matriz_plasma[1200*1200+1];
+}matriz_plasma[R_reso*R_reso+1+2];
+//}matriz_plasma[3000*3000+1];
 
 struct smatriz_plasma2{
 	float rho,phi,x,y;
     float vxe, vye, vxh2p, vyh2p, vxhp, vyhp, vxh20, vyh20;
-    float ve, vhp, vh2p;
+    float vx[4], vy[4];
+    float ve, vhp, vh2p, v[4];
 	int carga;
 	float t[3];
 	long long int h20,hp,h2p,electrones;
-    float k1x, k1y, k1z, k2x, k2y, k2z;
-//}matriz_plasma[8*61*50+1];
-//}matriz_plasma[7*61*60+1];
-}matriz_plasma2[12346+10000];
+}matriz_plasma2[R_reso*R_reso+1+2];
+//}matriz_plasma2[2000*2000+1];
 
-float nvx[12346+10000], nvy[12346+10000], ndt[12346+10000]={0}, ne[12346+10000];
+float ndt[2000*2000+1]={0};
 
 /*struct smatriz_plasma2{
 	float rho,phi,x,y;
@@ -148,7 +150,8 @@ struct scampo_magnetico{
 }campo_magnetico[60+1];
 
 //int nmatriz_plasma[60+1][7*60];
-int nmatriz_plasma[120+1][7*60];
+int nmatriz_plasma[R_reso+1][R_reso+1];
+//int nmatriz_plasma[2000+1][2000+1]={0};
 ////////////////////////////////////////////////////////////////////////Variables para salida
 FILE *dat, *dat2;
 char salidac[10];
@@ -160,6 +163,13 @@ main(){
     system("mkdir datos/datitos");*/
     CreateDirectory ("datos", NULL);
     CreateDirectory ("datos/promedios", NULL);
+    printf("R_reso*R_reso+1: %i\n",R_reso*R_reso+1);
+    //getchar();
+    /*float numero = 2.5;
+    int floor_x;
+    floor_x = floor(numero);
+    printf("flotante: %f floor(flotante): %i",numero,floor_x);
+    getchar();*/
     /*aaaprueba_dist();
     printf("Ya quedo la prueba v:");
     double fx[2]={2,3};
@@ -206,14 +216,33 @@ main(){
 
     return(0);*/
 
-
-    for(i=1;i<=11256;i++){
-        matriz_plasma[i].electrones=matriz_plasma[i].h20=matriz_plasma[i].h2p=matriz_plasma[i].hp=matriz_plasma[i].carga = 0;
+    //PONER NCELDAS AQUI ABAJO
+    for(i=1;i<=R_reso*R_reso+1;i++){
+        //matriz_plasma[i].electrones=matriz_plasma[i].h20=matriz_plasma[i].h2p=matriz_plasma[i].hp=matriz_plasma[i].carga = 0;
+        matriz_plasma[i].carga=matriz_plasma[i].electrones=matriz_plasma[i].h20=matriz_plasma[i].h2p=matriz_plasma[i].hp=0;
+        matriz_plasma[i].phi=matriz_plasma[i].rho=matriz_plasma[i].ve=matriz_plasma[i].vh2p=matriz_plasma[i].vhp=matriz_plasma[i].vxe=matriz_plasma[i].vxh20=matriz_plasma[i].vxh2p=matriz_plasma[i].vxhp=matriz_plasma[i].vye=matriz_plasma[i].vyh20=matriz_plasma[i].vyh2p=matriz_plasma[i].vyhp=matriz_plasma[i].x=matriz_plasma[i].y=0;
+        for(j=1;j<=4;j++){
+            matriz_plasma[i].t[j]=0;
+            matriz_plasma[i].v[j]=0;
+            matriz_plasma[i].vy[j]=0;
+            matriz_plasma[i].vx[j]=0;
+        }
     }
-
 	condiciones_iniciales();
+    printf("int(R*reso): %i\n",int(R*reso));
 	//crear_matriz_plasma();
 	crear_matriz_plasma_rec();
+	printf("Chequeo de celdas con rho>60mm\n");
+	//getchar();
+	//getchar();
+	//getchar();
+	for(i=1;i<=nceldas;i++){
+        if(i%100==0)printf("\rCelda actual: %i",i);
+        if(matriz_plasma[i].rho>60){
+            imprimir_celda_plasma_rec(i);
+            getchar();
+        }
+	}
 	arreglo_inicial();
 	leer_campo_magnetico();
     int int_y, int_x, int_i, int_j;
@@ -248,32 +277,41 @@ main(){
             getchar();
         }
     }
-    printf("INICIANDO DINAMICA\n");
+    /*matriz_plasma[nmatriz_plasma[ 801 ][ 901 ]].vxe = 1;
+    matriz_plasma[nmatriz_plasma[ 801 ][ 901 ]].vye = 0;
+    matriz_plasma[nmatriz_plasma[ 811 ][ 901 ]].vxe = -2;
+    matriz_plasma[nmatriz_plasma[ 811 ][ 901 ]].vye = 0;*/
+    /*printf("INICIANDO DINAMICA\n");
     sprintf(salidac,"datos/electron.dat",i);
     dat=fopen(salidac,"w");
     fprintf(dat, "#X\tY\tZ\n");
     sprintf(salidac,"datos/hp.dat",i);
     dat2=fopen(salidac,"w");
     fprintf(dat2, "#X\tY\tZ\n");
-    for(i=1;i<=10;i++){
-        printf("\ndinamica_i: %i",i);
+    fclose(dat);
+    fclose(dat2);
+    dat=fopen("datos/electron.dat","a");
+    dat2=fopen("datos/hp.dat","a");
+    for(i=1;i<=1000;i++){
+        printf("\rdinamica_i: %i",i);
         dinamica();
-        if(i%1==0){
+        if(i%10==0){
             //fprintf(dat, "\"x\", \"y\", \"electrones\"\n");
             for(j=1;j<=nceldas;j++){
                 if(matriz_plasma[j].electrones!=0){
-                    fprintf(dat,"%f\t%f\t%I64d\n", matriz_plasma[j].x, matriz_plasma[j].y, matriz_plasma[j].electrones);
+                    fprintf(dat,"%f\t%f\t%I64d%i\n", matriz_plasma[j].x, matriz_plasma[j].y, matriz_plasma[j].electrones, i);
                 }
                 if(matriz_plasma[j].hp!=0){
-                    fprintf(dat2,"%f\t%f\t%I64d\n", matriz_plasma[j].x, matriz_plasma[j].y, matriz_plasma[j].hp);
+                    fprintf(dat2,"%f\t%f\t%I64d%i\n", matriz_plasma[j].x, matriz_plasma[j].y, matriz_plasma[j].hp, i);
                 }
             }
         }
+        //getchar();
     }
-    printf("DESPUES DINAMICA\n");
     fclose(dat);
     fclose(dat2);
-    getchar();getchar();getchar();getchar();getchar();
+    printf("\nDESPUES DINAMICA\n");
+    getchar();getchar();getchar();getchar();getchar();*/
     /*for(i=1;i<=npart;i++){
         printf("\ni:%i,x:%f,y:%f,z:%f,q:%f",i,part[i].x,part[i].y,part[i].z,part[i].carga);
     }
@@ -299,8 +337,8 @@ main(){
                 beta();
             }
         }
-        if(p%1000==0){
-            if(p%100000==0){
+        if(p%10==0||p<=10){
+            if(p%actu==0){
                 //printf("\rPaso: %i Acept. Mov: %1.5f Rechazo negativas: %1.5f Rechazo met: %1.5f Energia: %e",p,c_mova/(c_mov*1.0),rechazo_neg/(c_mov*1.0), rechazo_met_mov/(c_mov*1.0),energia());
                 printf("\rPaso: %i A. tipo1: %1.5f A. tipo2: %1.5f A. tipo3: %1.5f uno: %1.5f Energia: %e",p,c_unoa/(c_uno*1.0),c_dosa/(c_dos*1.0),c_tresa/(c_tres*1.0),(c_unoa+c_dosa+c_tresa+rechazo_met_mov+rechazo_neg)/(c_mov*1.0),energia());
             }
@@ -350,6 +388,7 @@ void imprimir_datos_iniciales(){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void condiciones_iniciales(){
+    printf("Condiciones iniciales\n");
     leer_datos_iniciales();
     esc = 1e-3;//diam*1e-9;
 
@@ -368,7 +407,7 @@ void condiciones_iniciales(){
     tempei = tempei*qe/kb;
     tempee = tempee*qe/kb;
 
-    printf("te: %f ti: %f",tempee,tempei);
+    printf("te: %f ti: %f\n",tempee,tempei);
 
     //printf("\ntempei: %f tempee: %f\n", tempei, tempee);
     //getchar();
@@ -505,108 +544,126 @@ void crear_matriz_plasma(){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void crear_matriz_plasma_rec(){
-    int i,j,k,contadorm=0,contadorm2=0,contadorvec=0;
+    int i,j,k,contadorm=0,contadorm2=1130915,contadorvec=0;
     float vi, fvi;
-    float fraccion = 0.25;
-
-    for(i=-(R+1);i<=R+1;i++){
-        for(j=-(R+1);j<=R+1;j++){
-            if(i*i+j*j<=R*R){
+    printf("Crear matriz plasma rec\n");
+    printf("Asignando posiciones\n");
+    /*printf("sizeof(plasma[1]): %i\tsizeof(plasma[2]): %i",sizeof(matriz_plasma[1]),sizeof(matriz_plasma[2]));
+    printf("sizeof(plasma): %i\tplasma/plasma[1]: %i\n",sizeof(matriz_plasma),sizeof(matriz_plasma)/sizeof(matriz_plasma[1]));
+    printf("sizeof(matriz[1][1]): %i\tsizeof(matriz): %i",sizeof(nmatriz_plasma[1][1]),sizeof(nmatriz_plasma));*/
+    //getchar();
+    for(i=-int(R*reso);i<=int(R*reso);i++){
+        for(j=-int(R*reso);j<=int(R*reso);j++){
+            if(i*i+j*j<=int(R*reso)*int(R*reso)){
                 contadorm++;
-                nmatriz_plasma[i+int(R+1)+1][j+int(R+1)+1]=contadorm;
-                matriz_plasma[contadorm].x = i;
-                matriz_plasma[contadorm].y = j;
-                matriz_plasma[contadorm].rho = sqrt(matriz_plasma[contadorm].x*matriz_plasma[contadorm].x+matriz_plasma[contadorm].y*matriz_plasma[contadorm].y);
+                nmatriz_plasma[i+int(R*reso)+1][j+int(R*reso)+1]=contadorm;
+                matriz_plasma[contadorm].x = (1.0*(i+0.1))/reso;
+                matriz_plasma[contadorm].y = (1.0*(j+0.1))/reso;
+                matriz_plasma[contadorm].rho = sqrt(i*i+j*j)/reso;
+                //matriz_plasma[contadorm].rho = sqrt((matriz_plasma[contadorm].x*reso-0.1)*(matriz_plasma[contadorm].x*reso-0.1)+(matriz_plasma[contadorm].y*reso-0.1)*(matriz_plasma[contadorm].y*reso-0.1));
                 matriz_plasma[contadorm].phi = (atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x)+((atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x))<0?2*pi:0.0));
             }
             else{
                 contadorm2++;
-                nmatriz_plasma[i+int(R+1)+1][j+int(R+1)+1]=12345+contadorm2;
-                matriz_plasma[12345+contadorm2].x = i;
-                matriz_plasma[12345+contadorm2].y = j;
-                matriz_plasma[12345+contadorm2].rho = sqrt(matriz_plasma[contadorm].x*matriz_plasma[contadorm].x+matriz_plasma[contadorm].y*matriz_plasma[contadorm].y);
-                matriz_plasma[12345+contadorm2].phi = (atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x)+((atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x))<0?2*pi:0.0));
+                nmatriz_plasma[i+int(R*reso)+1][j+int(R*reso)+1]=contadorm2;
+                matriz_plasma[contadorm2].x = (1.0*(i+0.1))/reso;
+                matriz_plasma[contadorm2].y = (1.0*(j+0.1))/reso;
+                matriz_plasma[contadorm2].rho = sqrt(i*i+j*j)/reso;
+                //matriz_plasma[contadorm2].rho = sqrt(matriz_plasma[contadorm2].x*matriz_plasma[contadorm2].x+matriz_plasma[contadorm2].y*matriz_plasma[contadorm2].y);
+                matriz_plasma[contadorm2].phi = (atan2(matriz_plasma[contadorm2].y,matriz_plasma[contadorm2].x)+((atan2(matriz_plasma[contadorm2].y,matriz_plasma[contadorm2].x))<0?2*pi:0.0));
             }
         }
     }
+    /*int int_maxx = 600;
+    for(i=-int_maxx;i<=int_maxx;i++){
+        for(j=-int_maxx;j<=int_maxx;j++){
+            if(i+int(R*reso)+1>1201||j+int(R*reso)+1>1201){
+                printf("i: %i\tj: %i",i+int(R*reso)+1,j+int(R*reso)+1);
+                getchar();
+            }
+            if(i*i+j*j<=int_maxx*int_maxx){
+                contadorm++;
+                nmatriz_plasma[i+int(R*reso)+1][j+int(R*reso)+1]=contadorm;
+                matriz_plasma[contadorm].x = 0.1*(i+0.1);
+                matriz_plasma[contadorm].y = 0.1*(j+0.1);
+                matriz_plasma[contadorm].rho = sqrt((matriz_plasma[contadorm].x-0.01)*(matriz_plasma[contadorm].x-0.01)+(matriz_plasma[contadorm].y-0.01)*(matriz_plasma[contadorm].y-0.01));
+                matriz_plasma[contadorm].phi = (atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x)+((atan2(matriz_plasma[contadorm].y,matriz_plasma[contadorm].x))<0?2*pi:0.0));
+            }
+            else{
+                contadorm2++;
+                nmatriz_plasma[i+int(R*reso)+1][j+int(R*reso)+1]=contadorm2;
+                matriz_plasma[contadorm2].x = 0.1*(i+0.1);
+                matriz_plasma[contadorm2].y = 0.1*(j+0.1);
+                matriz_plasma[contadorm2].rho = sqrt((matriz_plasma[contadorm2].x-0.01)*(matriz_plasma[contadorm2].x-0.01)+(matriz_plasma[contadorm2].y-0.01)*(matriz_plasma[contadorm2].y-0.01));
+                matriz_plasma[contadorm2].phi = (atan2(matriz_plasma[contadorm2].y,matriz_plasma[contadorm2].x)+((atan2(matriz_plasma[contadorm2].y,matriz_plasma[contadorm2].x))<0?2*pi:0.0));
+            }
+        }
+    }*/
     nceldas=contadorm;
     n1i = nceldas+1;
     n2i = nceldas+2;
+    printf("\nnceldas: %i\tn1i: %i\tn2i: %i\n",nceldas,n1i,n2i);
+    printf("Asignando velocidades\n");
+    for(i=1;i<=nceldas;i++){
+        if(i%1000==0)printf("\rCelda actual: %i",i);
+        matriz_plasma[i].vxe = aaadist_normal(0.0,sqrt(kb*tempee/me));
+        matriz_plasma[i].vye = aaadist_normal(0.0,sqrt(kb*tempee/me));
+        matriz_plasma[i].vxhp = aaadist_normal(0.0,sqrt(kb*tempei/mhp));
+        matriz_plasma[i].vyhp = aaadist_normal(0.0,sqrt(kb*tempei/mhp));
+        matriz_plasma[i].vxh2p = aaadist_normal(0.0,sqrt(kb*tempei/mh2p));
+        matriz_plasma[i].vyh2p = aaadist_normal(0.0,sqrt(kb*tempei/mh2p));
+        matriz_plasma[i].vxh20 = aaadist_normal(0.0,sqrt(kb*tempei/mh20));
+        matriz_plasma[i].vyh20 = aaadist_normal(0.0,sqrt(kb*tempei/mh20));
+
+        matriz_plasma[i].ve = sqrt( matriz_plasma[i].vxe*matriz_plasma[i].vxe + matriz_plasma[i].vye*matriz_plasma[i].vye );
+        matriz_plasma[i].vhp = sqrt( matriz_plasma[i].vxhp*matriz_plasma[i].vxhp + matriz_plasma[i].vyhp*matriz_plasma[i].vyhp );
+        matriz_plasma[i].vh2p = sqrt( matriz_plasma[i].vxh2p*matriz_plasma[i].vxh2p + matriz_plasma[i].vyh2p*matriz_plasma[i].vyh2p );
+    }
     /*for(i=1;i<=nceldas;i++){
-        do{
-            vi=aleam(-4*sqrt((kb*tempee)/me), 4*sqrt((kb*tempee)/me) );
-            fvi=exp(-vi*vi*me/(2*kb*tempee))*pow(me/(2*pi*kb*tempee), 1.0/2.0);
-        }while(alea()*pow(me/(2*pi*kb*tempee), 1.0/2.0)>fvi);
-        matriz_plasma[i].vxe = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempee)/me), 4*sqrt((kb*tempee)/me) );
-            fvi=exp(-vi*vi*me/(2*kb*tempee))*pow(me/(2*pi*kb*tempee), 1.0/2.0);
-        }while(alea()*pow(me/(2*pi*kb*tempee), 1.0/2.0)>fvi);
-        matriz_plasma[i].vye = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mhp), 4*sqrt((kb*tempei)/mhp) );
-            fvi=exp(-vi*vi*mhp/(2*kb*tempei))*pow(mhp/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mhp/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vxhp = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mhp), 4*sqrt((kb*tempei)/mhp) );
-            fvi=exp(-vi*vi*mhp/(2*kb*tempei))*pow(mhp/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mhp/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vyhp = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mh2p), 4*sqrt((kb*tempei)/mh2p) );
-            fvi=exp(-vi*vi*mh2p/(2*kb*tempei))*pow(mh2p/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mh2p/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vxh2p = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mh2p), 4*sqrt((kb*tempei)/mh2p) );
-            fvi=exp(-vi*vi*mh2p/(2*kb*tempei))*pow(mh2p/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mh2p/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vyh2p = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mh20), 4*sqrt((kb*tempei)/mh20) );
-            fvi=exp(-vi*vi*mh20/(2*kb*tempei))*pow(mh20/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mh20/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vxh20 = vi;
-        do{
-            vi=aleam(-4*sqrt((kb*tempei)/mh20), 4*sqrt((kb*tempei)/mh20) );
-            fvi=exp(-vi*vi*mh20/(2*kb*tempei))*pow(mh20/(2*pi*kb*tempei), 1.0/2.0);
-        }while(alea()*pow(mh20/(2*pi*kb*tempei), 1.0/2.0)>fvi);
-        matriz_plasma[i].vyh20 = vi;
+        if(i%1000==0)printf("\rCelda actual: %i",i);
+        matriz_plasma[i].vxe = aaadist_normal(0.0,1);
+        matriz_plasma[i].vye = aaadist_normal(0.0,1);
+        matriz_plasma[i].vxhp = aaadist_normal(0.0,1);
+        matriz_plasma[i].vyhp = aaadist_normal(0.0,1);
+        matriz_plasma[i].vxh2p = aaadist_normal(0.0,1);
+        matriz_plasma[i].vyh2p = aaadist_normal(0.0,1);
+        matriz_plasma[i].vxh20 = aaadist_normal(0.0,1);
+        matriz_plasma[i].vyh20 = aaadist_normal(0.0,1);
 
         matriz_plasma[i].ve = sqrt( matriz_plasma[i].vxe*matriz_plasma[i].vxe + matriz_plasma[i].vye*matriz_plasma[i].vye );
         matriz_plasma[i].vhp = sqrt( matriz_plasma[i].vxhp*matriz_plasma[i].vxhp + matriz_plasma[i].vyhp*matriz_plasma[i].vyhp );
         matriz_plasma[i].vh2p = sqrt( matriz_plasma[i].vxh2p*matriz_plasma[i].vxh2p + matriz_plasma[i].vyh2p*matriz_plasma[i].vyh2p );
     }*/
-
-    printf("nceldas: %i\tn1i: %i\tn2i: %i",nceldas,n1i,n2i);
+    printf("\rImprimiendo archivos de celda\n");
     dat = fopen("celdas.dat","w");
     fprintf(dat,"#X Y Z\n");
     for(i=1;i<=nceldas;i++){
-        fprintf(dat,"%e\t%e\t%e\n",matriz_plasma[i].x,matriz_plasma[i].y, sqrt( matriz_plasma[i].x*matriz_plasma[i].x + matriz_plasma[i].y*matriz_plasma[i].y ) );
+        fprintf(dat,"%e\t%e\t%e\n",matriz_plasma[i].x,matriz_plasma[i].y, matriz_plasma[i].rho );
     }
     fclose(dat);
     dat = fopen("celdas2.dat","w");
     fprintf(dat,"i\tj\tx\ty\tncelda\n");
-    for(i=1;i<=2*R+1;i++){
-        for(j=1;j<=2*R+1;j++){
+    for(i=1;i<=2*R*reso+1;i++){
+        for(j=1;j<=2*R*reso+1;j++){
             fprintf(dat,"%d\t%d\t%f\t%f\t%d\n",i,j,matriz_plasma[nmatriz_plasma[i][j]].x,matriz_plasma[nmatriz_plasma[i][j]].y, nmatriz_plasma[i][j]);
         }
     }
     fclose(dat);
 
+    printf("Haciendo histograma de velocidades\n");
+
     long int clases[201]={0};
     for(i=1;i<=nceldas;i++){
-        clases[ int( 200*(matriz_plasma[i].vxe+4*sqrt((kb*tempee)/me))/(8*sqrt((kb*tempee)/me)) )+1]++;
+        clases[ int( 200*(matriz_plasma[i].vxe+5*sqrt((kb*tempee)/me))/(10*sqrt((kb*tempee)/me)) )+1]++;
     }
-    printf("Que show");
     //getchar();
     dat = fopen("histograma.dat","w");
     fprintf(dat,"#X\tY\n");
     for(i=1;i<=200;i++){
-        fprintf(dat,"%e\t%i\n", -4*sqrt((kb*tempee)/me)+ (i-1)*(8*sqrt((kb*tempee)/me))/(200) , clases[i] );
+        fprintf(dat,"%e\t%i\n", -5*sqrt((kb*tempee)/me)+ (i-1)*(10*sqrt((kb*tempee)/me))/(200) , clases[i] );
     }
     fclose(dat);
+    printf("Termino de hacer histograma de velocidades\n");
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void calc_carga(int a){
@@ -625,7 +682,7 @@ void arreglo_inicial(){
         }
     }
     fclose(dat);
-    printf("\n\nASIGNANDO ARREGLO INICIAL\n");
+    printf("\rASIGNANDO ARREGLO INICIAL\n");
     /*if(matriz_plasma[1].electrones==0){
         printf("\nAsignando electrones");
         for(i=1;i<=(int)(nelectrones/res);i++){
@@ -669,14 +726,46 @@ void arreglo_inicial(){
         }
     }*/
     for(i=1;i<=nceldas;i++){
-        if(i==nmatriz_plasma[ 32 ][ 62 ]){
+        matriz_plasma[i].electrones = nelectrones/nceldas;
+        matriz_plasma[i].hp = nhp/nceldas;
+        matriz_plasma[i].h2p = nh2p/nceldas;
+        matriz_plasma[i].h20 = nh20/nceldas;
+    }
+    for(i=1;i<=nelectrones%nceldas;i++){
+        matriz_plasma[i].electrones += 1;
+    }
+    for(i=1;i<=nhp%nceldas;i++){
+        matriz_plasma[i].hp += 1;
+    }
+    for(i=1;i<=nh2p%nceldas;i++){
+        matriz_plasma[i].h2p += 1;
+    }
+    for(i=1;i<=nh20%nceldas;i++){
+        matriz_plasma[i].h20 += 1;
+    }
+    printf("Calculando carga\n");
+    for(i=1;i<=nceldas;i++){
+        calc_carga(i);
+    }
+    /*for(i=1;i<=nceldas;i++){
+        if(i==nmatriz_plasma[ int((R+20)*reso) + 1 ][ int(R*reso) + 1 ]){
             matriz_plasma[i].electrones=nelectrones/2.0;
+            matriz_plasma[i].h2p=0;
+            matriz_plasma[i].hp=0;
+            matriz_plasma[i].h20=0;
+        }
+        else if(i==nmatriz_plasma[ int((R+15)*reso) + 1 ][ int(R*reso) + 1 ]){
+            matriz_plasma[i].electrones=nelectrones/2.0;
+            matriz_plasma[i].h2p=0;
+            matriz_plasma[i].hp=0;
+            matriz_plasma[i].h20=0;
+        }else if(i==nmatriz_plasma[ int((R-30)*reso) + 1 ][ int(R*reso) + 1 ]){
+            matriz_plasma[i].electrones=0;
             matriz_plasma[i].h2p=nh2p/2.0;
             matriz_plasma[i].hp=nhp/2.0;
             matriz_plasma[i].h20=nh20/2.0;
-        }
-        else if(i==nmatriz_plasma[ 85 ][ 61 ]){
-            matriz_plasma[i].electrones=nelectrones/2.0;
+        }else if(i==nmatriz_plasma[ int((R-25)*reso) + 1 ][ int(R*reso) + 1 ]){
+            matriz_plasma[i].electrones=0;
             matriz_plasma[i].h2p=nh2p/2.0;
             matriz_plasma[i].hp=nhp/2.0;
             matriz_plasma[i].h20=nh20/2.0;
@@ -687,7 +776,7 @@ void arreglo_inicial(){
             matriz_plasma[i].h20=0;
         }
         calc_carga(i);
-    }
+    }*/
     /*if((matriz_plasma[1].electrones==0)&&(matriz_plasma[1].h20==0)&&(matriz_plasma[1].hp==0)&&(matriz_plasma[1].h2p==0)&&(matriz_plasma[1].carga==0)){
         for(i=1;i<=5;i++){
             for(j=1;j<=2;j++){
@@ -961,7 +1050,7 @@ void metropolis_plasma(int a){
 void dinamica(void){
     int i,j;
     int celdaobj,nmov;
-    float vxx, vyy, dd, acel[2]={0,0}, B = 0.1*me/qe;
+    float vxx, vyy, dd, acel[2]={0,0}, B = 0.1*mhp/qe;
     for(i=1;i<=nceldas;i++){
         matriz_plasma2[i].electrones = 0;
         matriz_plasma2[i].hp = 0;
@@ -977,15 +1066,20 @@ void dinamica(void){
             //celdaobj = celda_dir_rec_neg(i);
             dd = distancianormal(i,celdaobj);
             ndt[i] = dd/sqrt(matriz_plasma[i].vxe*matriz_plasma[i].vxe+matriz_plasma[i].vye*matriz_plasma[i].vye);
-            printf("\nELECTRON\tdistancia: %f\tdt: %f",dd,ndt[i]);
-            acel[0] = -qe*matriz_plasma[i].vye*B/me;
-            acel[1] = qe*matriz_plasma[i].vxe*B/me;
+            //printf("\nELECTRON\tdistancia: %f\tdt: %f",dd,ndt[i]);
+            if(dd==0){
+                printf("\n\nDD = 0\n");
+                celdaobj = celda_dir_rec_error(i);
+                getchar();
+            }
+            /*acel[0] = -qe*matriz_plasma[i].vye*B/me;
+            acel[1] = qe*matriz_plasma[i].vxe*B/me;*/
             vxx = matriz_plasma[i].vxe;
             vyy = matriz_plasma[i].vye;
             //matriz_plasma[i].vxe = vxx + ndt[i]*acel[0];
             //matriz_plasma[i].vye = vyy + ndt[i]*acel[1];
             matriz_plasma[i].vxe = vxx*cos(ndt[i]*qe*B/me) + vyy*sin(-ndt[i]*qe*B/me);
-            matriz_plasma[i].vye = vyy*cos(ndt[i]*qe*B/me) - vxx*sin(-ndt[i]*qe*B/me);
+            matriz_plasma[i].vye = -vxx*sin(-ndt[i]*qe*B/me) + vyy*cos(ndt[i]*qe*B/me) ;
             matriz_plasma2[celdaobj].vxe += matriz_plasma[i].electrones*matriz_plasma[i].vxe;
             matriz_plasma2[celdaobj].vye += matriz_plasma[i].electrones*matriz_plasma[i].vye;
             matriz_plasma2[celdaobj].electrones += matriz_plasma[i].electrones;
@@ -1022,18 +1116,17 @@ void dinamica(void){
             matriz_plasma[i].t[2]=distancianormal(i,celdaobj)/matriz_plasma[i].vh2p;*/
         }
         if(matriz_plasma[i].hp!=0){
-            //celdaobj = celda_dir(i);
             celdaobj = celda_dir_rec_hp(i);
-            //celdaobj = celda_dir_rec_neg(i);
             dd = distancianormal(i,celdaobj);
             ndt[i] = dd/sqrt(matriz_plasma[i].vxhp*matriz_plasma[i].vxhp+matriz_plasma[i].vyhp*matriz_plasma[i].vyhp);
-            printf("\nPROTON\tdistancia: %f\tdt: %f",dd,ndt[i]);
-            acel[0] = -qe*matriz_plasma[i].vyhp*B/me;
-            acel[1] = qe*matriz_plasma[i].vxhp*B/me;
+            //printf("\nPROTON\tdistancia: %f\tdt: %f",dd,ndt[i]);
+            if(dd==0){
+                printf("\n\nDD = 0\n");
+                celdaobj = celda_dir_rec_error_hp(i);
+                getchar();
+            }
             vxx = matriz_plasma[i].vxhp;
             vyy = matriz_plasma[i].vyhp;
-            //matriz_plasma[i].vxe = vxx + ndt[i]*acel[0];
-            //matriz_plasma[i].vye = vyy + ndt[i]*acel[1];
             matriz_plasma[i].vxhp = vxx*cos(ndt[i]*qe*B/mhp) + vyy*sin(ndt[i]*qe*B/mhp);
             matriz_plasma[i].vyhp = vyy*cos(ndt[i]*qe*B/mhp) - vxx*sin(ndt[i]*qe*B/mhp);
             matriz_plasma2[celdaobj].vxhp += matriz_plasma[i].hp*matriz_plasma[i].vxhp;
@@ -1123,11 +1216,9 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"h2+\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
-        for(j=1;j<=8;j++){
-            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
-            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
-            fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h2p);
-        }
+        xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi);
+        yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi);
+        fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h2p);
     }
     fclose(dat);
 
@@ -1136,11 +1227,9 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"h20\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
-        for(j=1;j<=8;j++){
-            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
-            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
-            fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h20);
-        }
+        xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi);
+        yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi);
+        fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h20);
     }
     fclose(dat);
 
@@ -1149,11 +1238,9 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"hp\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
-        for(j=1;j<=8;j++){
-            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
-            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
-            fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].hp);
-        }
+        xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi);
+        yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi);
+        fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].hp);
     }
     fclose(dat);
 
@@ -1162,11 +1249,9 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"n_particulas\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
-        for(j=1;j<=8;j++){
-            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
-            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
-            fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h2p+matriz_plasma[i].hp+matriz_plasma[i].h20+matriz_plasma[i].electrones);
-        }
+        xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi);
+        yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi);
+        fprintf(dat,"%f\t%f\t%I64d\n", xx, yy, matriz_plasma[i].h2p+matriz_plasma[i].hp+matriz_plasma[i].h20+matriz_plasma[i].electrones);
     }
     fclose(dat);
 
@@ -1175,12 +1260,8 @@ void actu_salida(void){
     //fprintf(dat, "\"x\", \"y\", \"carga\"\n");
     fprintf(dat, "#X\tY\tZ\n");
     for(i=1;i<=nceldas;i++){
-        for(j=1;j<=8;j++){
-            xx = matriz_plasma[i].rho*cos(matriz_plasma[i].phi+(j-1)*pi/4);
-            yy = matriz_plasma[i].rho*sin(matriz_plasma[i].phi+(j-1)*pi/4);
-            fprintf(dat,"%f\t%f\t%i\n", xx, yy, matriz_plasma[i].carga);
-            cargatotaaal += matriz_plasma[i].carga;
-        }
+        fprintf(dat,"%f\t%f\t%i\n", matriz_plasma[i].x, matriz_plasma[i].y, matriz_plasma[i].carga);
+        cargatotaaal += matriz_plasma[i].carga;
     }
     fprintf(dat,"carga total: %i\n",cargatotaaal);
     fclose(dat);
@@ -1602,7 +1683,7 @@ int celda_dir(int a){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 int celda_dir_rec(int a){
-    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar, rrho, pphi;
+    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar;//, rrho, pphi;
     int int_x, int_y, int_i, int_j;
     normav = sqrt( matriz_plasma[a].vxe*matriz_plasma[a].vxe + matriz_plasma[a].vye*matriz_plasma[a].vye );
     normar = sqrt( matriz_plasma[a].x*matriz_plasma[a].x + matriz_plasma[a].y*matriz_plasma[a].y );
@@ -1633,10 +1714,14 @@ int celda_dir_rec(int a){
     }else{
         int_y = 1;
     }
-    int_i = (int)( matriz_plasma[a].x + 61 + 1 )+int_x;
-    int_j = (int)( matriz_plasma[a].y + 61 + 1 )+int_y;
-    if(matriz_plasma[a].electrones>=1e30){
-        printf("celda inicial: %i celda objetivo: %i int_i: %i int_j:%i\n",a,nmatriz_plasma[ int_i ][ int_j ],int_i,int_j);
+    int_i = floor( matriz_plasma[a].x*reso) + floor(R*reso) + 1 + int_x;
+    int_j = floor( matriz_plasma[a].y*reso) + floor(R*reso) + 1 + int_y;
+    if(a==10000000000000000){
+        printf("\nANTES DE CELDA_ERROR\nCELDA INICIAL: %i i: %i j: %i", a, (int)( matriz_plasma[a].x*reso + R*reso + 1 ), (int)( matriz_plasma[a].y*reso + R*reso + 1 ));
+        printf("\nCELDA OBJETIVO: %i i: %i j: %i", nmatriz_plasma[ int_i ][ int_j ], int_i, int_j );
+        printf("\nint_x: %i int_y: %i",int_x, int_y);
+        printf("\ny*reso: %f int(y*reso): %i\n",matriz_plasma[a].y*reso, (((int) (matriz_plasma[a].y*reso + 32768.5)) - 32768));
+        printf("\nR*reso: %f int(R*reso): %i\n",R*reso, int(R*reso));
         printf("vx_a: %f vy_a: %f\n",matriz_plasma[a].vxe,matriz_plasma[a].vye);
         printf("vx_obj: %f vy_onj: %f\nAAAA",matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vxe,matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vye);
         imprimir_celda_plasma_rec(a);
@@ -1647,20 +1732,83 @@ int celda_dir_rec(int a){
     /*if(nmatriz_plasma[ int_i ][ int_j ]>=12345||nmatriz_plasma[ int_i ][ int_j ]==0){
         printf("int_i: %i\tint_j: %i",int_i,int_j);
         return( nmatriz_plasma[ int_i ][ int_j ] );*/
-    rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
-    if(rrho>60){
-        if(a==nmatriz_plasma[ 62 ][ 62 ]){
+    //rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
+    if(matriz_plasma[ nmatriz_plasma[int_i][int_j] ].rho>60){
+        if(a==221099000){
             printf("Que show r: %f",sqrt(int_i*int_i+int_j*int_j));
             getchar();
         }
-        return( nmatriz_plasma[ (int)( matriz_plasma[a].x + 61 + 1 ) ][ (int)( matriz_plasma[a].y + 61 + 1 ) ] );
+        return( nmatriz_plasma[ (int)( matriz_plasma[a].x*reso + R*reso + 1 ) ][ (int)( matriz_plasma[a].y*reso + R*reso + 1 ) ] );
+    }else{
+        return( nmatriz_plasma[ int_i ][ int_j ] );
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////
+int celda_dir_rec_error(int a){
+    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar;//, rrho, pphi;
+    int int_x, int_y, int_i, int_j;
+    normav = sqrt( matriz_plasma[a].vxe*matriz_plasma[a].vxe + matriz_plasma[a].vye*matriz_plasma[a].vye );
+    normar = sqrt( matriz_plasma[a].x*matriz_plasma[a].x + matriz_plasma[a].y*matriz_plasma[a].y );
+    /*if(matriz_plasma[a].electrones!=0){
+        printf("a: %i vx: %f vy: %f",a,matriz_plasma[a].vxe,matriz_plasma[a].vye);
+        getchar();
+    }*/
+    //if(fabs(normar - matriz_plasma[a].rho)>1e-5)printf("celda: %i normar: %f rho_a: %f resta: %e\n", a, normar, matriz_plasma[a].rho, normar - matriz_plasma[a].rho);
+    /*float v1[3], v2[3];
+    vector<float> d1, d2, d3;
+    v1[0] = matriz_plasma[a].vxe;  v1[1] = matriz_plasma[a].vye; v1[2] = 0.0;
+    v2[0] = 0.0;  v2[1] = 0.0; v2[2] = campo_magnetico[int(matriz_plasma[a].rho*10)].bz;
+    d1 = vect(v1); d2 = vect(v2); d3 = cruz(d1,d2);*/
+    //pphi = (atan2(matriz_plasma[a].vye,matriz_plasma[a].vxe)+((atan2(matriz_plasma[a].vye,matriz_plasma[a].vxe))<0?2*pi:0.0));
+    //printf("pphi: %f",pphi);
+    //getchar();
+    if(matriz_plasma[a].vxe/normav<-(1.0/3.0)){
+        int_x = -1;
+    }else if(matriz_plasma[a].vxe/normav<1.0/3.0){
+        int_x = 0;
+    }else{
+        int_x = 1;
+    }
+    if(matriz_plasma[a].vye/normav<-(1.0/3.0)){
+        int_y = -1;
+    }else if(matriz_plasma[a].vye/normav<1.0/3.0){
+        int_y = 0;
+    }else{
+        int_y = 1;
+    }
+    int_i = floor( matriz_plasma[a].x*reso) + floor(R*reso) + 1 + int_x;
+    int_j = floor( matriz_plasma[a].y*reso) + floor(R*reso) + 1 + int_y;
+    if(a>=1e30){
+        printf("\nANTES DE CELDA_ERROR\nCELDA INICIAL: %i i: %i j: %i", a, (int)( matriz_plasma[a].x*reso + R*reso + 1 ), (int)( matriz_plasma[a].y*reso + R*reso + 1 ));
+        printf("\nCELDA OBJETIVO: %i i: %i j: %i", nmatriz_plasma[ int_i ][ int_j ], int_i, int_j );
+        printf("\nint_x: %i int_y: %i",int_x, int_y);
+        printf("\nx*reso: %f int(x*reso): %i\n",matriz_plasma[a].x*reso, floor(matriz_plasma[a].x*reso));
+        printf("\ny*reso: %f int(y*reso): %i\n",matriz_plasma[a].y*reso, floor(matriz_plasma[a].y*reso));
+        printf("\nR*reso: %f int(R*reso): %i\n",R*reso, floor(R*reso));
+        printf("vx_a: %f vy_a: %f\n",matriz_plasma[a].vxe,matriz_plasma[a].vye);
+        printf("vx_obj: %f vy_onj: %f\nAAAA",matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vxe,matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vye);
+        imprimir_celda_plasma_rec(a);
+        printf("\nOBJ");
+        imprimir_celda_plasma_rec(nmatriz_plasma[ int_i ][ int_j ]);
+        getchar();
+    }
+    /*if(nmatriz_plasma[ int_i ][ int_j ]>=12345||nmatriz_plasma[ int_i ][ int_j ]==0){
+        printf("int_i: %i\tint_j: %i",int_i,int_j);
+        return( nmatriz_plasma[ int_i ][ int_j ] );*/
+    //rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
+    if(matriz_plasma[ nmatriz_plasma[int_i][int_j] ].rho>R){
+        if(a==221099000){
+            printf("Que show r: %f",sqrt(int_i*int_i+int_j*int_j));
+            getchar();
+        }
+        return( nmatriz_plasma[ (int)( matriz_plasma[a].x*reso + R*reso + 1 ) ][ (int)( matriz_plasma[a].y*reso + R*reso + 1 ) ] );
     }else{
         return( nmatriz_plasma[ int_i ][ int_j ] );
     }
 }
 ////////////////////////////////////////////////////////////////////////////////////
 int celda_dir_rec_hp(int a){
-    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar, rrho, pphi;
+    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar;//, rrho, pphi;
     int int_x, int_y, int_i, int_j;
     normav = sqrt( matriz_plasma[a].vxhp*matriz_plasma[a].vxhp + matriz_plasma[a].vyhp*matriz_plasma[a].vyhp );
     normar = sqrt( matriz_plasma[a].x*matriz_plasma[a].x + matriz_plasma[a].y*matriz_plasma[a].y );
@@ -1691,8 +1839,8 @@ int celda_dir_rec_hp(int a){
     }else{
         int_y = 1;
     }
-    int_i = (int)( matriz_plasma[a].x + 61 + 1 )+int_x;
-    int_j = (int)( matriz_plasma[a].y + 61 + 1 )+int_y;
+    int_i = floor( matriz_plasma[a].x*reso) + floor(R*reso) + 1 + int_x;
+    int_j = floor( matriz_plasma[a].y*reso) + floor(R*reso) + 1 + int_y;
     if(matriz_plasma[a].electrones>=1e30){
         printf("celda inicial: %i celda objetivo: %i int_i: %i int_j:%i\n",a,nmatriz_plasma[ int_i ][ int_j ],int_i,int_j);
         printf("vx_a: %f vy_a: %f\n",matriz_plasma[a].vxe,matriz_plasma[a].vye);
@@ -1702,16 +1850,76 @@ int celda_dir_rec_hp(int a){
         imprimir_celda_plasma_rec(nmatriz_plasma[ int_i ][ int_j ]);
         getchar();
     }
+    //rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
+    if(matriz_plasma[ nmatriz_plasma[int_i][int_j] ].rho>R){
+            printf("Que show i: %i r: %f",nmatriz_plasma[int_i][int_j],matriz_plasma[ nmatriz_plasma[int_i][int_j] ].rho);
+            getchar();
+        return( nmatriz_plasma[ int_i-int_x ][ int_j-int_y ] );
+    }else{
+        return( nmatriz_plasma[ int_i ][ int_j ] );
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////
+int celda_dir_rec_error_hp(int a){
+    float B = campo_magnetico[int(matriz_plasma[a].rho*10)].bz, normav, normar;//, rrho, pphi;
+    int int_x, int_y, int_i, int_j;
+    normav = sqrt( matriz_plasma[a].vxhp*matriz_plasma[a].vxhp + matriz_plasma[a].vyhp*matriz_plasma[a].vyhp );
+    normar = sqrt( matriz_plasma[a].x*matriz_plasma[a].x + matriz_plasma[a].y*matriz_plasma[a].y );
+    /*if(matriz_plasma[a].electrones!=0){
+        printf("a: %i vx: %f vy: %f",a,matriz_plasma[a].vxe,matriz_plasma[a].vye);
+        getchar();
+    }*/
+    //if(fabs(normar - matriz_plasma[a].rho)>1e-5)printf("celda: %i normar: %f rho_a: %f resta: %e\n", a, normar, matriz_plasma[a].rho, normar - matriz_plasma[a].rho);
+    /*float v1[3], v2[3];
+    vector<float> d1, d2, d3;
+    v1[0] = matriz_plasma[a].vxe;  v1[1] = matriz_plasma[a].vye; v1[2] = 0.0;
+    v2[0] = 0.0;  v2[1] = 0.0; v2[2] = campo_magnetico[int(matriz_plasma[a].rho*10)].bz;
+    d1 = vect(v1); d2 = vect(v2); d3 = cruz(d1,d2);*/
+    //pphi = (atan2(matriz_plasma[a].vye,matriz_plasma[a].vxe)+((atan2(matriz_plasma[a].vye,matriz_plasma[a].vxe))<0?2*pi:0.0));
+    //printf("pphi: %f",pphi);
+    //getchar();
+    if(matriz_plasma[a].vxhp/normav<-(1.0/3.0)){
+        int_x = -1;
+    }else if(matriz_plasma[a].vxhp/normav<1.0/3.0){
+        int_x = 0;
+    }else{
+        int_x = 1;
+    }
+    if(matriz_plasma[a].vyhp/normav<-(1.0/3.0)){
+        int_y = -1;
+    }else if(matriz_plasma[a].vyhp/normav<1.0/3.0){
+        int_y = 0;
+    }else{
+        int_y = 1;
+    }
+    int_i = floor( matriz_plasma[a].x*reso) + floor(R*reso) + 1 + int_x;
+    int_j = floor( matriz_plasma[a].y*reso) + floor(R*reso) + 1 + int_y;
+    //if(a>=1e30){
+        printf("\nANTES DE CELDA_ERROR\nCELDA INICIAL: %i i: %f j: %f", a, floor( matriz_plasma[a].x*reso) + floor(R*reso) + 1, floor( matriz_plasma[a].y*reso) + floor(R*reso) + 1);
+        printf("\nCELDA OBJETIVO: %i i: %i j: %i", nmatriz_plasma[ int_i ][ int_j ], int_i, int_j );
+        printf("\nint_x: %i int_y: %i",int_x, int_y);
+        printf("\nx*reso: %f int(x*reso): %f\n",matriz_plasma[a].x*reso, floor(matriz_plasma[a].x*reso));
+        printf("\ny*reso: %f int(y*reso): %f\n",matriz_plasma[a].y*reso, floor(matriz_plasma[a].y*reso));
+        printf("\nR*reso: %f int(R*reso): %f\n",R*reso, floor(R*reso));
+        printf("vx_a: %f vy_a: %f\n",matriz_plasma[a].vxhp,matriz_plasma[a].vyhp);
+        printf("vx_obj: %f vy_onj: %f\nAAAA",matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vxhp,matriz_plasma[nmatriz_plasma[ int_i ][ int_j ]].vyhp);
+        imprimir_celda_plasma_rec(a);
+        printf("\nrho: %f",matriz_plasma[a].rho);
+        printf("\nOBJ");
+        imprimir_celda_plasma_rec(nmatriz_plasma[ int_i ][ int_j ]);
+        printf("\nrho: %f",matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].rho);
+        getchar();
+    //}
     /*if(nmatriz_plasma[ int_i ][ int_j ]>=12345||nmatriz_plasma[ int_i ][ int_j ]==0){
         printf("int_i: %i\tint_j: %i",int_i,int_j);
         return( nmatriz_plasma[ int_i ][ int_j ] );*/
-    rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
-    if(rrho>R){
-        if(a==nmatriz_plasma[ 62 ][ 62 ]){
+    //rrho = sqrt(matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].x+matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y*matriz_plasma[ nmatriz_plasma[ int_i ][ int_j ] ].y);
+    if(matriz_plasma[ nmatriz_plasma[int_i][int_j] ].rho>R){
+        if(a==221099000){
             printf("Que show r: %f",sqrt(int_i*int_i+int_j*int_j));
             getchar();
         }
-        return( nmatriz_plasma[ (int)( matriz_plasma[a].x + 61 + 1 ) ][ (int)( matriz_plasma[a].y + 61 + 1 ) ] );
+        return( nmatriz_plasma[ (int)( matriz_plasma[a].x*reso + R*reso + 1 ) ][ (int)( matriz_plasma[a].y*reso + R*reso + 1 ) ] );
     }else{
         return( nmatriz_plasma[ int_i ][ int_j ] );
     }
