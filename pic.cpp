@@ -382,7 +382,7 @@ int main( int argc, char **argv ){
 			pDiagPlotterXY.plot_png( "dump/emittance_beamxy"+to_string(1.0*a)+".png");
 
 			hacer_histograma_v_r_E(a, 0, particulas);
-			hacer_histograma_v_r_E(a, 0, particulas_sec);
+			hacer_histograma_v_r_E(a, 2, particulas_sec);
 
 			calcular_potencial(a, potencial);
 		}
@@ -902,7 +902,7 @@ double calcular_vprom(ParticleDataBase3D *pdb, int a){
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 void calcular_temperatura(int a, ParticleDataBase3D pdb, double E, Vec3D& temp, ostream& fout){
 double vref, masa;
-double sum_x=0, sum_y=0, sum_z=0;
+double sum_x=0, sum_y=0, sum_z=0, I_total=0;
 int contadorparticulas=0;
 for(size_t k = 0; k < pdb.size(); k++){
 	Particle3D pp = pdb.particle(k);
@@ -910,17 +910,18 @@ for(size_t k = 0; k < pdb.size(); k++){
 		Vec3D vel = pp.velocity();
 		vref = sqrt( (2*E*fabs(pp.q()))/(pp.m()) );
 
-		sum_x += vel(0)*vel(0);
-		sum_y += vel(1)*vel(1);
-		sum_z += (vel(2)-vref)*(vel(2)-vref);
+		sum_x += fabs(pp.IQ())*vel(0)*vel(0);
+		sum_y += fabs(pp.IQ())*vel(1)*vel(1);
+		sum_z += fabs(pp.IQ())*(vel(2)-vref)*(vel(2)-vref);
 
 		masa = pp.m();
+		I_total += fabs(pp.IQ());
 		contadorparticulas++;
 	}
 }
-temp(0) = (masa*sum_x)/(CHARGE_E*contadorparticulas);
-temp(1) = (masa*sum_y)/(CHARGE_E*contadorparticulas);
-temp(2) = (masa*sum_z)/(CHARGE_E*contadorparticulas);
+temp(0) = (masa*sum_x)/(CHARGE_E*I_total);
+temp(1) = (masa*sum_y)/(CHARGE_E*I_total);
+temp(2) = (masa*sum_z)/(CHARGE_E*I_total);
 
 if(contadorparticulas==0){
 	cout << "Que shows v:" << endl;
