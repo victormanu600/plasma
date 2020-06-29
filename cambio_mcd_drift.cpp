@@ -79,7 +79,7 @@ int contadorrr = 0;
 float esc, densidad[4], volumen, nelectronesr, tempee, tempei, tempe[4], B, reso;
 long long int nh20, nhp, nh2p, nelectrones, npart[4], naleprom=0, part_por_grupo[4] ;
 float R;
-const int R_reso = (2*(12))*5/1+1, part_plasma_size = 6000001;                      //Primer numero es R, segundo es reso, 2 es por que es de -R a R y +1 para comenzar los arreglos desde 1
+const int R_reso = (2*(102))*1/2+1, part_plasma_size = 6000001;                      //Primer numero es R, segundo es reso, 2 es por que es de -R a R y +1 para comenzar los arreglos desde 1
 float me, mhp, mh2p, mh20, masa[4];
 int carga[4];
 int n_grupos[4];
@@ -97,7 +97,7 @@ float k_auto = 0, dtau = 0, de_frac=0;
 bool win_os;
 float min_mass, max_mass;
 int min_charge, max_charge;
-float x00[4], rmin[2]={0},rmax[2]={0};
+float x00[4];
 ///////////////////////////////////////////////////////////////////////Contadores
 int c_mov=0,c_mova=1, c_dina=0;
 int c_uno=0,c_unoa=0,c_dos=0,c_dosa=0,c_tres=0,c_tresa=0;
@@ -130,7 +130,7 @@ struct smatriz_plasma{
 //}matriz_plasma2[2000*2000+1];
 
 struct spart_plasma{
-    float x, y, vx, vy, v;
+    float x, y, vx, vy, vz, v;
     long long int part;
     int contador, celda_antes;
 //}part_plasma[1000*(R_reso*R_reso+1)][4];
@@ -287,7 +287,7 @@ int main(){
             dat = fopen("pruebas/energia_dinamica.dat","a");
             fprintf(dat, "%d %e",p,energia_con_de);
             fclose(dat);
-            energia_con_de = 0;//energia();
+            energia_con_de = energia();
             dat = fopen("pruebas/energia_dinamica.dat","a");
             fprintf(dat, " %e\n",energia_con_de);
             fclose(dat);
@@ -305,7 +305,7 @@ int main(){
                 calc_dens(1);
             }
         }
-        if(p%100==0||b_dinamica){
+        if(p%100000==0||b_dinamica){
             if(win_os){
                 printf("\rPaso: %9d ",p);
                 for(int i=0; i<ncomp; i++)printf("Acep%d: %1.5f ",i,1.0*contador_a[i]/contador[i]);
@@ -366,6 +366,8 @@ int main(){
             getchar();
         }
     }
+    printf("\ni: %d x: %e y: %e",1,part_plasma[1][0].x,part_plasma[1][0].y);
+    getchar();
 }
 ////////////////////////////////////////////////////////////////////////////////////FIN DE MAIN
 ////////////////////////////////////////////////////////////////////////////////////
@@ -450,7 +452,7 @@ void leer_datos_iniciales(void){
         fclose(dat);
         if(solodinamica){
             printf("Solo dinamica es 1!\n");
-            pasos = 500;
+            pasos = 1000;
             actu = 1;
             terma = 0;
         }
@@ -623,11 +625,8 @@ void crear_matriz_plasma(){
     nceldas=contadorm;
     n1i = nceldas+1;
     n2i = nceldas+2;
-    //n_grupos[0] = n_grupos[1] = n_grupos[2] = 1100*nceldas;
-    //n_grupos[0] = n_grupos[1] = n_grupos[2] = 140*nceldas;
-    //n_grupos[0] = n_grupos[1] = n_grupos[2] = 200*nceldas;
-    n_grupos[0] = n_grupos[1] = n_grupos[2] = 6000;
-    //n_grupos[0] = n_grupos[1] = n_grupos[2] = 2;
+    //n_grupos[0] = n_grupos[1] = n_grupos[2] = 6000000;
+    n_grupos[0] = n_grupos[1] = n_grupos[2] = 1;
     printf("\nnceldas: %i\tn1i: %i\tn2i: %i R_reso: %d\n",nceldas,n1i,n2i,R_reso);
     for(j=0;j<ncomp;j++)printf("n_grupos_%d: %d ",j,n_grupos[j]); printf("\n");
     part_por_grupo[0]=npart[0]/n_grupos[0];
@@ -850,15 +849,15 @@ void arreglo_inicial(void){
                 //xrand = distribucion_normal_5(0.0,R_inicial/5.0);
                 //yrand = distribucion_normal_5(0.0,R_inicial/5.0);
                 if(j==0){
-                    //xrand = separacion;
-                    //yrand = 0;
-                    xrand = distribucion_normal_5(-separacion,1);
-                    yrand = distribucion_normal_5(0,1);
+                    xrand = 0;
+                    yrand = 0;
+                    //xrand = distribucion_normal_5(-separacion,1);
+                    //yrand = distribucion_normal_5(0,1);
                 }else if(j==1){
-                    //xrand = -separacion;
-                    //yrand = 0;
-                    xrand = distribucion_normal_5(separacion,1);
-                    yrand = distribucion_normal_5(0,1);
+                    xrand = 0;
+                    yrand = 0;
+                    //xrand = distribucion_normal_5(separacion,1);
+                    //yrand = distribucion_normal_5(0,1);
                 }
                 if(xrand*xrand+yrand*yrand<R_inicial*R_inicial){
                 //if(part_a_mallado(xrand,yrand)<=nceldas&&part_a_mallado(xrand,yrand)>=1){
@@ -869,8 +868,10 @@ void arreglo_inicial(void){
                         part_plasma[part_cont][j].x = xrand;
                         part_plasma[part_cont][j].y = yrand;
                         //theta = atan2(yrand,xrand); r = norma(xrand,yrand);
-                        part_plasma[part_cont][j].vx = 0.0;//1e3*distribucion_normal_5(0.0,sqrt(kb*tempe[j]/masa[j]));
-                        part_plasma[part_cont][j].vy = 1e3*distribucion_normal_5(0.0,sqrt(kb*tempe[j]/masa[j]));
+                        part_plasma[part_cont][j].vx = 0;//1e3*distribucion_normal_5(0.0,sqrt(kb*tempe[j]/masa[j]));
+                        part_plasma[part_cont][j].vy = 0;//1e3*distribucion_normal_5(0.0,sqrt(kb*tempe[j]/masa[j]));
+                        if(j==0)part_plasma[part_cont][j].vz = -1e3*sqrt((2*1000.0*qe)/(masa[j]));
+                        else part_plasma[part_cont][j].vz = 0.0;
                         //part_plasma[part_cont][j].vx = carga[j]*( r*esc*qe*B/masa[j] )*sin(theta);
                         //part_plasma[part_cont][j].vy = -carga[j]*( r*esc*qe*B/masa[j] )*cos(theta);
                         //part_plasma[part_cont][j].vx = alea_i(-1,1)*2*sqrt(kb*tempe[j]/masa[j]);
@@ -886,10 +887,6 @@ void arreglo_inicial(void){
             }while(part_cont<n_grupos[j]);
             //n_grupos[j]=part_cont;
         }
-        rmin[0]=part_plasma[1][0].x;
-        rmin[1]=part_plasma[1][0].y;
-        rmax[0]=part_plasma[1][0].x;
-        rmax[1]=part_plasma[1][0].y;
         /*int celdaa = part_a_mallado(-5,0,6,1,0);
         celdaa=1;
         part_plasma[celdaa][0].x=-5;
@@ -1893,12 +1890,15 @@ void dinamica(void){
     float x0, v0x, y0, v0y;
     float Ex=0.0,Ey=0.0,Bz=B;
     float dt, normar;
-    int ktau = 200, contadork, contador_dina, cambios_de_celda[2]={0};
+    int ktau = 400, contadork, contador_dina, cambios_de_celda[2]={0};
     float suma_dist[2]={0};
 
     if(solodinamica){
         if(B>1e-5){
-            dt = ((2*pi*min_mass)/(500.0*max_charge*qe*B));
+            //dt = ((2*pi*min_mass)/(50.0*max_charge*qe*B));
+            //dt = dtau;
+            //dt = 2*pi*0.3/(10000*sqrt((8*1*qe)/(pi*masa[0])));
+            dt = 2*pi*0.3/(1000*sqrt((2*1000.0*qe)/(masa[0])));
         }else{
             float max_v = part_plasma[1][0].v;
             for(int j=0; j<ncomp; j++){
@@ -1920,7 +1920,29 @@ void dinamica(void){
             //getchar();
         }
     }
-    dt *= 0.005;
+    if(p>pasoinicial){
+        float vx0, vy0, vz0, angulo_z = sqrt((2*1000.0*qe)/(masa[0]))*dt/0.3, normav0, normav;
+        printf("\nangulo: %e dt: %e",angulo_z,dt);
+        //getchar(); getchar();
+        dat = fopen("pruebas/velocidades.dat","a");
+        for(int j=0; j<ncomp; j++){
+            for(int i=1; i<=n_grupos[j]; i++){
+                vx0 = part_plasma[i][j].vx;
+                vy0 = part_plasma[i][j].vy;
+                vz0 = part_plasma[i][j].vz;
+                if(j==0)fprintf(dat,"%d %e %e %e\n", p, vx0, vy0, vz0);
+                part_plasma[i][j].vx = vx0*cos(angulo_z) + vz0*sin(angulo_z);
+                part_plasma[i][j].vz = -vx0*sin(angulo_z) + vz0*cos(angulo_z);
+                /*normav0 = sqrt(vx0*vx0+vy0*vy0+vz0*vz0);
+                normav = sqrt(part_plasma[i][j].vx*part_plasma[i][j].vx+part_plasma[i][j].vy*part_plasma[i][j].vy+part_plasma[i][j].vz*part_plasma[i][j].vz);
+                printf("\nvx0: %e vx: %e\nvz0: %e vz: %e\nv0: %e v: %e",vx0,part_plasma[i][j].vx,vz0,part_plasma[i][j].vz,normav0,normav);
+                getchar();*/
+            }
+        }
+        fclose(dat);
+    }
+
+    dt *= 0.0025;
     //Zprintf("\nmasa[%d]: %e masa[%d]: %e masa[%d]: %e min_mass: %e",0,masa[0],1,masa[1],2,masa[2],min_mass);
     //printf("\ncarga[%d]: %d carga[%d]: %d carga[%d]: %d max_charge: %d",0,carga[0],1,carga[1],2,carga[2],max_charge);
     //printf("\nperiodo_min: %e dt_sincampo: %e dt(B): %e\n", ((2*pi*min_mass)/(100.0*max_charge*qe*B)), (esc/(100.0*max_v*reso)), B>1e-5?((2*pi*min_mass)/(100.0*max_charge*qe*B)):(esc/(100.0*max_v*reso)) );
@@ -2099,16 +2121,9 @@ void dinamica(void){
             getchar();
         }
     }
-    if(part_plasma[1][0].x<rmin[0])rmin[0]=part_plasma[1][0].x;
-    if(part_plasma[1][0].y<rmin[1])rmin[1]=part_plasma[1][0].y;
-    if(part_plasma[1][0].x>rmax[0])rmax[0]=part_plasma[1][0].x;
-    if(part_plasma[1][0].y>rmax[1])rmax[1]=part_plasma[1][0].y;
     if(debug==2)printf("\nDESPUES CICLO");
     dat = fopen("pruebas/cambios_celda.dat","a");
     fprintf(dat,"%e\t%d\t%d\t%d\t%d\t%f\t%f\n",100*dt,p,n_grupos[0],cambios_de_celda[0],cambios_de_celda[1],1.0*suma_dist[0]/n_grupos[0],1.0*suma_dist[1]/n_grupos[1]);
-    fclose(dat);
-    dat = fopen("pruebas/r_larmor.dat","a");
-    fprintf(dat,"%d %f %f %f %f\n",p,rmin[0],rmax[0],rmin[1],rmax[1]);
     fclose(dat);
     if(debug==2)printf("\nDESPUES CAMBIO DE CELDA");
     //fprintf(dat,"radio:\t%e",mass*norma(v0x,v0y)/(fabs(charge)*qe*Bz));
@@ -2209,7 +2224,7 @@ void crear_archivos_iniciales_en_blanco(void){
     fclose(dat);
     dat = fopen("pruebas/energia_dinamica.dat","w");
     fclose(dat);
-    dat = fopen("pruebas/r_larmor.dat","w");
+    dat = fopen("pruebas/velocidades.dat","w");
     fclose(dat);
 
     for(int i=1;i<=R_reso*R_reso+1;i++){
