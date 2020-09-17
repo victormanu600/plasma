@@ -281,20 +281,12 @@ int main(){
             if(rechazo == 0){
                 metropolis_plasma();
             }else{
-
-                part_plasma[alea_part][tipo] = part_plasma[0][tipo];
-                if(blineal){
-                    for(int i=0; i<8; i++)matriz_plasma[celdas_mc.finales[i]]=matriz_plasma[celdas_mc.finales[i]];
-                }else{
-                    matriz_plasma[n1] = matriz_plasma[n1i];
-                    matriz_plasma[n2] = matriz_plasma[n2i];
-                }
-
-                //importar_part_a_mallado();
                 rechazo_neg++;
-
-                //printf("\nQue show v:2");
-                //getchar();
+                part_plasma[alea_part][tipo] = part_plasma[0][tipo];
+                matriz_plasma[n1] = matriz_plasma[n1i];
+                matriz_plasma[n2] = matriz_plasma[n2i];
+                printf("\nQue show v:");
+                getchar();
                 //importar_part_a_mallado();
             }
         }else{
@@ -557,9 +549,9 @@ void condiciones_iniciales(){
     //densidad[0] = 2e19;
     volumen = pi*R*esc*R*esc*1e-6;
     //nelectronesr = densidad*volumen;
-    for(int i=0; i<ncomp; i++)npart[i] = densidad[i]*volumen;
-    /*npart[1] = densidad[1]*volumen;
-    npart[2] = densidad[2]*volumen;*/
+    npart[0] = densidad[0]*volumen;
+    npart[1] = densidad[1]*volumen;
+    npart[2] = densidad[2]*volumen;
 
     //npart[1] = npart[0];
     //npart[2] = 9*npart[0];
@@ -586,8 +578,8 @@ void condiciones_iniciales(){
     //printf("\ntempei: %f tempee: %f\n", tempei, tempee);
     //getchar();
 
-    for(int i=0; i<ncomp; i++)contador[i] = 0;
-    for(int i=0; i<ncomp; i++)contador_a[i] = 0;
+    contador[0] = 0; contador[1] = 0; contador[2] = 0;
+    contador_a[0] = 0; contador_a[1] = 0; contador_a[2] = 0;
 
     min_mass = masa[0]; max_mass = masa[0];
     min_charge = abs(carga[0]); max_charge = abs(carga[0]);
@@ -632,7 +624,7 @@ void crear_matriz_plasma(){
 
                 if(fabs( matriz_plasma[contadorm].x)>(R+1)||fabs( matriz_plasma[contadorm].y)>(R+1)){
                     dat = fopen("pruebas/getchares.dat","a");
-                    fprintf(dat,"Dentro de crear_matriz_plasma, dentro de if en ciclo. paso: %d\n",p);
+                    fprintf(dat,"Dentro de crear_matriz_plasma, dentro de if en ciclo.\n");
                     fprintf(dat,"\ni: %d x: %e y: %e rho: %e",contadorm,matriz_plasma[contadorm].x,matriz_plasma[contadorm].y,matriz_plasma[contadorm].rho);
                     fclose(dat);
                     getchar();
@@ -803,7 +795,7 @@ void calc_dens(int a){
 }
 ////////////////////////////////////////////////////////////////////////////////////
 void arreglo_inicial(void){
-    float xrand, yrand, theta, r, dummy, R_inicial = R-12;
+    float xrand, yrand, theta, r, dummy, R_inicial = R-4;
 	int max_n_grupos = n_grupos[0];
     int part_cont = 0;
     int dinaanterior;
@@ -1115,21 +1107,15 @@ int part_a_mallado(float a, float b, int c, int d, int e, int f, int g){
     ix = floor( a*reso ) + floor(R*reso) + f + 1;
     iy = floor( b*reso ) + floor(R*reso) + g + 1;
     if( ( ix <= 0 )||( iy <= 0 )||( ix > (R_reso+1) )||( iy > (R_reso+1) ) ){
-        if(c>=20){
-            ix = 10;
-            iy = 10;
-            rechazo=1;
-        }else{
-            dat = fopen("pruebas/error_mallado.dat","w");
-            fprintf(dat,"ix: %d iy: %d a: %e b: %e c: %d",ix,iy,a,b,c);
-            fclose(dat);
-            printf("\nix: %d iy: %d a: %e b: %e c: %d d: %d e: %d x: %e y: %e",ix,iy,a,b,c,d,e,part_plasma[d][e].x,part_plasma[d][e].y);
-            printf("\nx0: %e y0: %e vx0: %e vy0: %e",x00[0],x00[1],x00[2],x00[3]);
-            dat = fopen("pruebas/getchares.dat","a");
-            fprintf(dat,"Dentro de part_a_mallado, unico if viene de %d. paso: %d\n",c,p);
-            fclose(dat);
-            getchar();
-        }
+        dat = fopen("pruebas/error_mallado.dat","w");
+        fprintf(dat,"ix: %d iy: %d a: %e b: %e c: %d",ix,iy,a,b,c);
+        fclose(dat);
+        printf("\nix: %d iy: %d a: %e b: %e c: %d d: %d e: %d x: %e y: %e",ix,iy,a,b,c,d,e,part_plasma[d][e].x,part_plasma[d][e].y);
+        printf("\nx0: %e y0: %e vx0: %e vy0: %e",x00[0],x00[1],x00[2],x00[3]);
+        dat = fopen("pruebas/getchares.dat","a");
+        fprintf(dat,"Dentro de part_a_mallado, unico if viene de %d.\n",c);
+        fclose(dat);
+        getchar();
     }
     return(nmatriz_plasma[ix][iy]);
 }
@@ -1164,14 +1150,14 @@ void hacer_histograma(int a, int b){
         if(int( int_clases*(part_plasma[i][a].vx-vxmin)/(vxmax-vxmin) )+1<0){
             dat = fopen("pruebas/getchares.dat","a");
             fprintf(dat,"\nVXX: %e\tvxmin: %e\tvxmax: %e entero: %d",part_plasma[i][a].vx,vxmin,vxmax,int( int_clases*(part_plasma[i][a].vx-vxmin)/(vxmax-vxmin) )+1);
-            fprintf(dat,"Dentro de hacer_histograma, dentro de if entrada < 0 x de v. paso: %d\n",p);
+            fprintf(dat,"Dentro de hacer_histograma, dentro de if entrada < 0 x de v.\n");
             fclose(dat);
             getchar();
         }
         if(int( int_clases*(part_plasma[i][a].vy-vymin)/(vymax-vymin) )+1<0){
             dat = fopen("pruebas/getchares.dat","a");
             fprintf(dat,"\nVYY: %e\tvymin: %e\tvymax: %e entero: %d",part_plasma[i][a].vy,vymin,vymax,int( int_clases*(part_plasma[i][a].vy-vymin)/(vymax-vymin) )+1);
-            fprintf(dat,"Dentro de hacer_histograma, dentro de if entrada < 0 y de v. paso: %d\n",p);
+            fprintf(dat,"Dentro de hacer_histograma, dentro de if entrada < 0 y de v.\n");
             fclose(dat);
             getchar();
         }
@@ -1272,7 +1258,7 @@ void hacer_distribucion( int a ){
 void mover_particulas_part(void){
     int idx, idy;
     int c_pared = 0;
-    tipo = alea_i( 0, ncomp-1 );
+    tipo = alea_i( 0, ncomp-2 );
     //printf("\ntipo: %d contador_tipo: %d",tipo,contador[tipo]);
     contador[tipo]++;
     //printf("\ncontador_tipo: %d",contador[tipo]);
@@ -1280,10 +1266,10 @@ void mover_particulas_part(void){
 
     if(blineal){
 
-        celdas_mc.finales[0] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 20, alea_part, tipo, 0, 0 );
-        celdas_mc.finales[1] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 21, alea_part, tipo, 1, 0 );
-        celdas_mc.finales[2] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 22, alea_part, tipo, 0, 1 );
-        celdas_mc.finales[3] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 23, alea_part, tipo, 1, 1 );
+        celdas_mc.finales[0] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 0, 0 );
+        celdas_mc.finales[1] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 1, 0 );
+        celdas_mc.finales[2] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 0, 1 );
+        celdas_mc.finales[3] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 1, 1 );
         for(int i=0; i<4; i++){
             for(int j=i+1; j<4; j++){
                 if(celdas_mc.finales[i]==celdas_mc.finales[j]){
@@ -1308,13 +1294,12 @@ void mover_particulas_part(void){
             part_plasma[alea_part][tipo].x += dxx;
             part_plasma[alea_part][tipo].y += dyy;
 
-            celdas_mc.finales[4] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 24, alea_part, tipo, 0, 0 );
-            celdas_mc.finales[5] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 25, alea_part, tipo, 1, 0 );
-            celdas_mc.finales[6] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 26, alea_part, tipo, 0, 1 );
-            celdas_mc.finales[7] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 27, alea_part, tipo, 1, 1 );
+            celdas_mc.finales[4] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 0, 0 );
+            celdas_mc.finales[5] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 1, 0 );
+            celdas_mc.finales[6] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 0, 1 );
+            celdas_mc.finales[7] = part_a_mallado( part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y, 0, alea_part, tipo, 1, 1 );
             for(int i=0; i<4; i++)matriz_plasma[celdas_mc.iniciales[4+i]]=matriz_plasma[celdas_mc.finales[4+i]];
-            if(rechazo==1)break;
-            //if(norma(part_plasma[alea_part][tipo].x,part_plasma[alea_part][tipo].y)>=(R-12))rechazo=1;
+            if(norma(part_plasma[alea_part][tipo].x,part_plasma[alea_part][tipo].y)>=(R-12))rechazo=1;
         }else{
             do{
                 if(c_pared>100){
@@ -1348,7 +1333,7 @@ void mover_particulas_part(void){
             imprimir_celda_plasma_part(alea_part,tipo);
             dat = fopen("pruebas/getchares.dat","a");
             fprintf(dat,"\ncontador_pared: %d rechazo: %d norma: %f",c_pared,rechazo, norma(part_plasma[alea_part][tipo].x, part_plasma[alea_part][tipo].y),R);
-            fprintf(dat,"Dentro de mover_particulas_plasma, dentro de if de c_pared. paso: %d\n",p);
+            fprintf(dat,"Dentro de mover_particulas_plasma, dentro de if de c_pared.\n");
             fclose(dat);
             getchar();
         }
@@ -1359,7 +1344,7 @@ void mover_particulas_part(void){
         dat = fopen("pruebas/getchares.dat","a");
         fprintf(dat,"\nc_pared: %d tipo: %d a_part: %d x: %f y: %f rho: %f",c_pared,tipo,alea_part,part_plasma[alea_part][tipo].x,part_plasma[alea_part][tipo].y,norma(part_plasma[alea_part][tipo].x,part_plasma[alea_part][tipo].y));
         fprintf(dat,"\nx_0: %f y_0: %f rho_0: %f",part_plasma[0][tipo].x,part_plasma[0][tipo].y,norma(part_plasma[0][tipo].x,part_plasma[0][tipo].y));
-        fprintf(dat,"Dentro de mover_particulas_plasma, dentro de if de c_pared fuera de do-while. paso: %d\n",p);
+        fprintf(dat,"Dentro de mover_particulas_plasma, dentro de if de c_pared fuera de do-while.\n");
         fclose(dat);
         getchar();
     }
@@ -1377,70 +1362,68 @@ void mover_particulas_part(void){
         for(int i=0; i<4; i++)imprimir_celda_plasma_rec(celdas_mc.finales[i]);
         for(int i=0; i<4; i++)imprimir_celda_plasma_rec(celdas_mc.finales[4+i]);
     }
-    if(rechazo==0){
-        if(blineal){
-            float area=0;
-            long long int fraccion1[4]={0}, fraccion2[4]={0};
+    if(blineal){
+        float area=0;
+        long long int fraccion1[4]={0}, fraccion2[4]={0};
 
-            area = (matriz_plasma[celdas_mc.finales[3]].x-part_plasma[0][tipo].x)*(matriz_plasma[celdas_mc.finales[3]].y-part_plasma[0][tipo].y);
-            fraccion1[0] = reso*reso*part_plasma[0][tipo].part*area;
-            area = (part_plasma[0][tipo].x-matriz_plasma[celdas_mc.finales[2]].x)*(matriz_plasma[celdas_mc.finales[2]].y-part_plasma[0][tipo].y);
-            fraccion1[1] = reso*reso*part_plasma[0][tipo].part*area;
-            area = (matriz_plasma[celdas_mc.finales[1]].x-part_plasma[0][tipo].x)*(part_plasma[0][tipo].y-matriz_plasma[celdas_mc.finales[1]].y);
-            fraccion1[2] = reso*reso*part_plasma[0][tipo].part*area;
-            area = (part_plasma[0][tipo].x-matriz_plasma[celdas_mc.finales[0]].x)*(part_plasma[0][tipo].y-matriz_plasma[celdas_mc.finales[0]].y);
-            fraccion1[3] = reso*reso*part_plasma[0][tipo].part*area;
-                dxx = alea_f(-dx,dx);
-                dyy = alea_f(-dy,dy);
+        area = (matriz_plasma[celdas_mc.finales[3]].x-part_plasma[0][tipo].x)*(matriz_plasma[celdas_mc.finales[3]].y-part_plasma[0][tipo].y);
+        fraccion1[0] = reso*reso*part_plasma[0][tipo].part*area;
+        area = (part_plasma[0][tipo].x-matriz_plasma[celdas_mc.finales[2]].x)*(matriz_plasma[celdas_mc.finales[2]].y-part_plasma[0][tipo].y);
+        fraccion1[1] = reso*reso*part_plasma[0][tipo].part*area;
+        area = (matriz_plasma[celdas_mc.finales[1]].x-part_plasma[0][tipo].x)*(part_plasma[0][tipo].y-matriz_plasma[celdas_mc.finales[1]].y);
+        fraccion1[2] = reso*reso*part_plasma[0][tipo].part*area;
+        area = (part_plasma[0][tipo].x-matriz_plasma[celdas_mc.finales[0]].x)*(part_plasma[0][tipo].y-matriz_plasma[celdas_mc.finales[0]].y);
+        fraccion1[3] = reso*reso*part_plasma[0][tipo].part*area;
+            dxx = alea_f(-dx,dx);
+            dyy = alea_f(-dy,dy);
 
-            area = (matriz_plasma[celdas_mc.finales[7]].x-part_plasma[alea_part][tipo].x)*(matriz_plasma[celdas_mc.finales[7]].y-part_plasma[alea_part][tipo].y);
-            fraccion2[0] = reso*reso*part_plasma[alea_part][tipo].part*area;
-            area = (part_plasma[alea_part][tipo].x-matriz_plasma[celdas_mc.finales[6]].x)*(matriz_plasma[celdas_mc.finales[6]].y-part_plasma[alea_part][tipo].y);
-            fraccion2[1] = reso*reso*part_plasma[alea_part][tipo].part*area;
-            area = (matriz_plasma[celdas_mc.finales[5]].x-part_plasma[alea_part][tipo].x)*(part_plasma[alea_part][tipo].y-matriz_plasma[celdas_mc.finales[5]].y);
-            fraccion2[2] = reso*reso*part_plasma[alea_part][tipo].part*area;
-            area = (part_plasma[alea_part][tipo].x-matriz_plasma[celdas_mc.finales[4]].x)*(part_plasma[alea_part][tipo].y-matriz_plasma[celdas_mc.finales[4]].y);
-            fraccion2[3] = reso*reso*part_plasma[alea_part][tipo].part*area;
+        area = (matriz_plasma[celdas_mc.finales[7]].x-part_plasma[alea_part][tipo].x)*(matriz_plasma[celdas_mc.finales[7]].y-part_plasma[alea_part][tipo].y);
+        fraccion2[0] = reso*reso*part_plasma[alea_part][tipo].part*area;
+        area = (part_plasma[alea_part][tipo].x-matriz_plasma[celdas_mc.finales[6]].x)*(matriz_plasma[celdas_mc.finales[6]].y-part_plasma[alea_part][tipo].y);
+        fraccion2[1] = reso*reso*part_plasma[alea_part][tipo].part*area;
+        area = (matriz_plasma[celdas_mc.finales[5]].x-part_plasma[alea_part][tipo].x)*(part_plasma[alea_part][tipo].y-matriz_plasma[celdas_mc.finales[5]].y);
+        fraccion2[2] = reso*reso*part_plasma[alea_part][tipo].part*area;
+        area = (part_plasma[alea_part][tipo].x-matriz_plasma[celdas_mc.finales[4]].x)*(part_plasma[alea_part][tipo].y-matriz_plasma[celdas_mc.finales[4]].y);
+        fraccion2[3] = reso*reso*part_plasma[alea_part][tipo].part*area;
 
-            long long int fraccion_total1 = 0, fraccion_total2 = 0;
-            fraccion_total1=fraccion1[0]+fraccion1[1]+fraccion1[2]+fraccion1[3];
-            fraccion_total2=fraccion2[0]+fraccion2[1]+fraccion2[2]+fraccion2[3];
+        long long int fraccion_total1 = 0, fraccion_total2 = 0;
+        fraccion_total1=fraccion1[0]+fraccion1[1]+fraccion1[2]+fraccion1[3];
+        fraccion_total2=fraccion2[0]+fraccion2[1]+fraccion2[2]+fraccion2[3];
 
-            /*printf("\n");
-            for(int i=0; i<4; i++)printf("frac1_%d: %lld\t",i,fraccion1[i]);
-            printf("\tfractot1: %lld\n",fraccion_total1);
-            for(int i=0; i<4; i++)printf("frac2_%d: %lld\t",i,fraccion2[i]);
-            printf("\tfractot2: %lld",fraccion_total2);*/
+        /*printf("\n");
+        for(int i=0; i<4; i++)printf("frac1_%d: %lld\t",i,fraccion1[i]);
+        printf("\tfractot1: %lld\n",fraccion_total1);
+        for(int i=0; i<4; i++)printf("frac2_%d: %lld\t",i,fraccion2[i]);
+        printf("\tfractot2: %lld",fraccion_total2);*/
 
-            for(int i=0; i<4; i++){
-                matriz_plasma[celdas_mc.finales[i]].part[tipo]-=fraccion1[i];
-                matriz_plasma[celdas_mc.finales[i]].carga-=carga[tipo]*fraccion1[i];
-                matriz_plasma[celdas_mc.finales[4+i]].part[tipo]+=fraccion2[i];
-                matriz_plasma[celdas_mc.finales[4+i]].carga+=carga[tipo]*fraccion2[i];
-            }
-        }else{
-            matriz_plasma[n1].part[tipo]+=part_plasma[alea_part][tipo].part;
-            matriz_plasma[n1].carga+=carga[tipo]*part_plasma[alea_part][tipo].part;
-            matriz_plasma[n2].part[tipo]-=part_plasma[alea_part][tipo].part;
-            matriz_plasma[n2].carga-=carga[tipo]*part_plasma[alea_part][tipo].part;
+        for(int i=0; i<4; i++){
+            matriz_plasma[celdas_mc.finales[i]].part[tipo]-=fraccion1[i];
+            matriz_plasma[celdas_mc.finales[i]].carga-=carga[tipo]*fraccion1[i];
+            matriz_plasma[celdas_mc.finales[4+i]].part[tipo]+=fraccion2[i];
+            matriz_plasma[celdas_mc.finales[4+i]].carga+=carga[tipo]*fraccion2[i];
         }
-        celdas_mc.size=8;
-        /*printf("\nsize: %d\n",celdas_mc.size);
-        for(int i=0; i<celdas_mc.size; i++)printf("c_f_%d: %d\t",i,celdas_mc.finales[i]);
-        printf("\n");
-        for(int i=0; i<celdas_mc.size; i++)printf("c_i_%d: %d\t",i,celdas_mc.iniciales[i]);*/
-        for(int i=0; i<celdas_mc.size-4; i++){
-            for(int j=0; j<4; j++){
-                if(celdas_mc.finales[4+i]==celdas_mc.finales[j]){
-                    //printf("\nLas celdas c_%d y c_%d son iguales.",j,4+i);
-                    int i_intermedio = celdas_mc.finales[4+i], i_intermedio_2 = celdas_mc.iniciales[4+i];
-                    celdas_mc.size--;
-                    celdas_mc.finales[4+i]=celdas_mc.finales[celdas_mc.size];
-                    celdas_mc.finales[celdas_mc.size]=i_intermedio;
-                    celdas_mc.iniciales[4+i]=celdas_mc.iniciales[celdas_mc.size];
-                    celdas_mc.iniciales[celdas_mc.size]=i_intermedio_2;
-                    i=0;
-                }
+    }else{
+        matriz_plasma[n1].part[tipo]+=part_plasma[alea_part][tipo].part;
+        matriz_plasma[n1].carga+=carga[tipo]*part_plasma[alea_part][tipo].part;
+        matriz_plasma[n2].part[tipo]-=part_plasma[alea_part][tipo].part;
+        matriz_plasma[n2].carga-=carga[tipo]*part_plasma[alea_part][tipo].part;
+    }
+    celdas_mc.size=8;
+    /*printf("\nsize: %d\n",celdas_mc.size);
+    for(int i=0; i<celdas_mc.size; i++)printf("c_f_%d: %d\t",i,celdas_mc.finales[i]);
+    printf("\n");
+    for(int i=0; i<celdas_mc.size; i++)printf("c_i_%d: %d\t",i,celdas_mc.iniciales[i]);*/
+    for(int i=0; i<celdas_mc.size-4; i++){
+        for(int j=0; j<4; j++){
+            if(celdas_mc.finales[4+i]==celdas_mc.finales[j]){
+                //printf("\nLas celdas c_%d y c_%d son iguales.",j,4+i);
+                int i_intermedio = celdas_mc.finales[4+i], i_intermedio_2 = celdas_mc.iniciales[4+i];
+                celdas_mc.size--;
+                celdas_mc.finales[4+i]=celdas_mc.finales[celdas_mc.size];
+                celdas_mc.finales[celdas_mc.size]=i_intermedio;
+                celdas_mc.iniciales[4+i]=celdas_mc.iniciales[celdas_mc.size];
+                celdas_mc.iniciales[celdas_mc.size]=i_intermedio_2;
+                i=0;
             }
         }
     }
@@ -1731,15 +1714,13 @@ void metropolis_plasma(void){
     int i, j;
 
     zeta = alea();
-    //de = -kb*tempe[tipo];
-    /*if(blineal){
+    if(blineal){
         de = de_plasma_lineal();
     }else{
         de = de_plasma();
     }
 
-    argexp = -de/(kb*tempe[tipo]);*/
-    argexp = 200;
+    argexp = -de/(kb*tempe[tipo]);
 
     if((argexp>=100?2.0:exp(argexp))>=zeta){
         contador_a[tipo]++;
@@ -2411,7 +2392,7 @@ void dinamica(void){
                             if((v0x*cos( atan2(y0,x0) )+v0y*sin( atan2(y0,x0) ))>=0){
                                 printf("\nVr positiva: %e",(v0x*cos( atan2(y0,x0) )+v0y*sin( atan2(y0,x0) )));
                                 dat = fopen("pruebas/getchares.dat","a");
-                                fprintf(dat,"Dentro de dinamica, segundo if vr positiva. paso: %d\n",p);
+                                fprintf(dat,"Dentro de dinamica, segundo if vr positiva.\n");
                                 fclose(dat);
                                 getchar();
                             }
@@ -2458,7 +2439,7 @@ void dinamica(void){
                 //if(norma(part_plasma[i][j].x,part_plasma[i][j].y)>R){
                 if(part_a_mallado(part_plasma[i][j].x,part_plasma[i][j].y,1,i,j,0,0)>nceldas||part_a_mallado(part_plasma[i][j].x,part_plasma[i][j].y,1,i,j,0,0)<1){
                     dat = fopen("pruebas/getchares.dat","a");
-                    fprintf(dat,"Dentro de dinamica, else de if ngrupos. paso: %d\n",p);
+                    fprintf(dat,"Dentro de dinamica, else de if ngrupos.\n");
                     fprintf(dat,"i: %d n_grupos[%d]: %d rho2: %f\n",i,j,n_grupos[j],norma(part_plasma[i][j].x,part_plasma[i][j].y));
                     fclose(dat);
                     getchar();
@@ -2467,7 +2448,7 @@ void dinamica(void){
         }else{
             printf("\nn_grupos[%d]: %d",j,n_grupos[j]);
             dat = fopen("pruebas/getchares.dat","a");
-            fprintf(dat,"Dentro de dinamica, else de if ngrupos. paso: %d\n",p);
+            fprintf(dat,"Dentro de dinamica, else de if ngrupos.\n");
             fclose(dat);
             getchar();
         }
@@ -2478,7 +2459,7 @@ void dinamica(void){
     if(part_plasma[1][0].y>rmax[1])rmax[1]=part_plasma[1][0].y;
     if(debug==2)printf("\nDESPUES CICLO");
     dat = fopen("pruebas/cambios_celda.dat","a");
-    fprintf(dat,"%e\t%d\t%d\t%d\t%d\t%f\t%f\n",ktau*dt,p,n_grupos[0],cambios_de_celda[0],cambios_de_celda[1],1.0*suma_dist[0]/n_grupos[0],1.0*suma_dist[1]/n_grupos[1]);
+    fprintf(dat,"%e\t%d\t%d\t%d\t%d\t%f\t%f\n",100*dt,p,n_grupos[0],cambios_de_celda[0],cambios_de_celda[1],1.0*suma_dist[0]/n_grupos[0],1.0*suma_dist[1]/n_grupos[1]);
     fclose(dat);
     dat = fopen("pruebas/r_larmor.dat","a");
     fprintf(dat,"%d %f %f %f %f\n",p,rmin[0],rmax[0],rmin[1],rmax[1]);
