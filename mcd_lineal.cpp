@@ -1586,7 +1586,6 @@ double de_plasma_lineal(void){
     bool bool1 = false, b_no_nmc=true;
     //bool1 = true;
     double ei = 0, ef = 0, d;
-    de_autoenergia = 0;
     for(i=1;i<=nceldas;i++){
         if(matriz_plasma[i].carga!=0){
             b_no_nmc = true;
@@ -1619,13 +1618,13 @@ double de_plasma_lineal(void){
             d = distancia(celdas_mc.finales[i],celdas_mc.finales[j]);
             if(d<0.5){
                 printf("\nd<0.5! interaccion entre las celdas finales i: %d j: %d",i,j);
-                getchar();
+            getchar();
             }
             ef += (qe*qe*matriz_plasma[celdas_mc.finales[i]].carga*matriz_plasma[celdas_mc.finales[j]].carga)/(4*pi*epce*epsi*d*esc);
             d = distancia(celdas_mc.iniciales[i],celdas_mc.iniciales[j]);
             if(d<0.5){
                 printf("\nd<0.5! interaccion entre las celdas iniciales i: %d j: %d",i,j);
-                getchar();
+            getchar();
             }
             ei += (qe*qe*matriz_plasma[celdas_mc.iniciales[i]].carga*matriz_plasma[celdas_mc.iniciales[j]].carga)/(4*pi*epce*epsi*d*esc);
         }
@@ -1682,7 +1681,7 @@ double de_plasma_lineal(void){
     }*/
 
     de_coulomb = ef - ei;
-    /*if(p>=terma){
+    if(p>=terma){
         for(i=0; i<celdas_mc.size; i++){
             ef += autoenergia(celdas_mc.finales[i]);
             ei += autoenergia(celdas_mc.iniciales[i]);
@@ -1693,7 +1692,7 @@ double de_plasma_lineal(void){
             printf(" de: %e\ndxx: %e dyy: %e",ef-ei,dxx,dyy);
             getchar();
         }
-    }*/
+    }
     dem = ef - ei;
     //printf("\nde_c: %e de_ae: %e de_a: %e T: %e kT: %e",de_coulomb,de_autoenergia,dem,tempe[tipo],kb*tempe[tipo]);
     //getchar();
@@ -1733,13 +1732,14 @@ void metropolis_plasma(void){
 
     zeta = alea();
     //de = -kb*tempe[tipo];
-    if(blineal){
+    /*if(blineal){
         de = de_plasma_lineal();
     }else{
         de = de_plasma();
     }
 
-    argexp = -de/(kb*tempe[tipo]);
+    argexp = -de/(kb*tempe[tipo]);*/
+    argexp = 200;
 
     if((argexp>=100?2.0:exp(argexp))>=zeta){
         contador_a[tipo]++;
@@ -2113,7 +2113,7 @@ double energia(void){
                 }
             }
         }
-        //aenergia_total += autoenergia(i);
+        aenergia_total += autoenergia(i);
         ecoulomb_total += energia_i;
     }
     energia_total = aenergia_total + ecoulomb_total;
