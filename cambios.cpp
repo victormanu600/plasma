@@ -81,7 +81,7 @@ float esc, densidad[4], volumen, nelectronesr, tempee, tempei, tempe[4], B, dx, 
 float reso;
 long long int nh20, nhp, nh2p, nelectrones, npart[4], naleprom=0, part_por_grupo[4] ;
 float R;
-const int R_reso = (2*(110))*5/11+1, part_plasma_size = 6000001;                      //Primer numero es R, segundo es reso, 2 es por que es de -R a R y +1 para comenzar los arreglos desde 1
+const int R_reso = (2*(110))*11/11+1, part_plasma_size = 6000001;                      //Primer numero es R, segundo es reso, 2 es por que es de -R a R y +1 para comenzar los arreglos desde 1
 float me, mhp, mh2p, mh20, masa[4];
 int carga[4];
 int n_grupos[4];
@@ -1390,8 +1390,6 @@ void mover_particulas_part(void){
             fraccion1[2] = reso*reso*part_plasma[0][tipo].part*area;
             area = (part_plasma[0][tipo].x-matriz_plasma[celdas_mc.finales[0]].x)*(part_plasma[0][tipo].y-matriz_plasma[celdas_mc.finales[0]].y);
             fraccion1[3] = reso*reso*part_plasma[0][tipo].part*area;
-                dxx = alea_f(-dx,dx);
-                dyy = alea_f(-dy,dy);
 
             area = (matriz_plasma[celdas_mc.finales[7]].x-part_plasma[alea_part][tipo].x)*(matriz_plasma[celdas_mc.finales[7]].y-part_plasma[alea_part][tipo].y);
             fraccion2[0] = reso*reso*part_plasma[alea_part][tipo].part*area;
@@ -1586,7 +1584,6 @@ double de_plasma_lineal(void){
     bool bool1 = false, b_no_nmc=true;
     //bool1 = true;
     double ei = 0, ef = 0, d;
-    de_autoenergia = 0;
     for(i=1;i<=nceldas;i++){
         if(matriz_plasma[i].carga!=0){
             b_no_nmc = true;
@@ -1619,13 +1616,13 @@ double de_plasma_lineal(void){
             d = distancia(celdas_mc.finales[i],celdas_mc.finales[j]);
             if(d<0.5){
                 printf("\nd<0.5! interaccion entre las celdas finales i: %d j: %d",i,j);
-                getchar();
+            getchar();
             }
             ef += (qe*qe*matriz_plasma[celdas_mc.finales[i]].carga*matriz_plasma[celdas_mc.finales[j]].carga)/(4*pi*epce*epsi*d*esc);
             d = distancia(celdas_mc.iniciales[i],celdas_mc.iniciales[j]);
             if(d<0.5){
                 printf("\nd<0.5! interaccion entre las celdas iniciales i: %d j: %d",i,j);
-                getchar();
+            getchar();
             }
             ei += (qe*qe*matriz_plasma[celdas_mc.iniciales[i]].carga*matriz_plasma[celdas_mc.iniciales[j]].carga)/(4*pi*epce*epsi*d*esc);
         }
@@ -1682,7 +1679,7 @@ double de_plasma_lineal(void){
     }*/
 
     de_coulomb = ef - ei;
-    /*if(p>=terma){
+    if(p>=terma){
         for(i=0; i<celdas_mc.size; i++){
             ef += autoenergia(celdas_mc.finales[i]);
             ei += autoenergia(celdas_mc.iniciales[i]);
@@ -1693,7 +1690,7 @@ double de_plasma_lineal(void){
             printf(" de: %e\ndxx: %e dyy: %e",ef-ei,dxx,dyy);
             getchar();
         }
-    }*/
+    }
     dem = ef - ei;
     //printf("\nde_c: %e de_ae: %e de_a: %e T: %e kT: %e",de_coulomb,de_autoenergia,dem,tempe[tipo],kb*tempe[tipo]);
     //getchar();
@@ -1740,6 +1737,7 @@ void metropolis_plasma(void){
     }
 
     argexp = -de/(kb*tempe[tipo]);
+    //argexp = 200;
 
     if((argexp>=100?2.0:exp(argexp))>=zeta){
         contador_a[tipo]++;
@@ -2113,7 +2111,7 @@ double energia(void){
                 }
             }
         }
-        //aenergia_total += autoenergia(i);
+        aenergia_total += autoenergia(i);
         ecoulomb_total += energia_i;
     }
     energia_total = aenergia_total + ecoulomb_total;
