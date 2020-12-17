@@ -20,6 +20,7 @@
 #include <random.hpp>
 #define PI 3.14159265359
 #define KB 1.38064852E-23
+#define EPCE 8.854187817e-12
 using namespace std;
 
 //fprintf(fp11," %9.6f ," ,epot(Xce));
@@ -71,6 +72,9 @@ void imprimir_scharge(int a, MeshScalarField scharge );
 
 void calc_cross_sections(void);
 double cross_sec(int a, int b, double E);
+void calcular_carga_por_slab(int a, MeshScalarField scharge, ofstream &fout);
+void calcular_energia_por_slab(int a, MeshScalarField scharge, ofstream &fout);
+float norma(float a, float b);
 
 
 //GLOBALES
@@ -91,6 +95,7 @@ Vec3D size(0.22,0.22,0.01), origen(-size[0]/2.0,-size[1]/2.0,0.0);
 origen[1]=-size[1]/2.0;
 origen[2]=0.0;*/
 int int_size[3];
+bool in_or_out[177][177];
 float cell_size = 0.00125;
 float z_max = 10.0;
 int32_t niteraciones = 3000;//z_max/size[2];
@@ -154,7 +159,8 @@ int main( int argc, char **argv ){
 	printf("limite: %f",size[0]-cell_size);
 	getchar();*/
 	bool fout[3] = {true, true, true};
-
+    for(int i=0; i<3; i++)cout << "\nint_size_" << i << ": " << int_size[i] << endl;
+    //getchar();
 	Geometry cubo(MODE_3D, Int3D ( int_size[0], int_size[1], int_size[2] ), origen, cell_size );
 	Mesh mesh1(MODE_3D, Int3D ( int_size[0], int_size[1], int_size[2] ), origen, cell_size );
 	Solid *s2 = new FuncSolid( cilindro );
@@ -304,9 +310,14 @@ int main( int argc, char **argv ){
 
 	ofstream filetemp( "temperatura.txt" );
 	filetemp << "# temperatura.txt" << endl;
-    //double sigmavelxy = sqrt((4000.0*CHARGE_E)/(masas[0]*MASS_U));
+	ofstream file_carga( "carga_por_slab.dat" );
+	file_carga.close();
+	ofstream file_energia( "energia_por_slab.dat" );
+	file_energia.close();
+    double sigmavelxy = sqrt((4000.0*CHARGE_E)/(masas[0]*MASS_U));
     double energia_z = 50000;
     I = CHARGE_E*rho_prom*PI*radio*radio*1e-6*sqrt(2.0*energia_z*CHARGE_E/(masas[0]*MASS_U))/cell_size;
+    //I = CHARGE_E*rho_prom*PI*radio*radio*1e-6*1e8/cell_size;
     cout << "\nI_pic: " << I << endl;//return(0);
 
 
@@ -335,8 +346,9 @@ int main( int argc, char **argv ){
         //getchar();
     }
 
-	//crear_haz_gaussiano(I,cargas[0],masas[0],radio_haz,E_p,temp_n,npart,&particulas);
-	/*for(int i_part=0; i_part<50000; i_part++){
+	/*//crear_haz_gaussiano(I,cargas[0],masas[0],radio_haz,E_p,temp_n,npart,&particulas);
+	int n_cumulos=50000;
+	for(int i_part=0; i_part<n_cumulos; i_part++){
 	//for(int i_part=0; i_part<1; i_part++){
         float vx_elec, x_elec, vy_elec, y_elec, vz_elec;
         x_elec = distribucion_normal_5(0.0,0.019);
@@ -344,14 +356,15 @@ int main( int argc, char **argv ){
         y_elec = distribucion_normal_5(0.0,0.019);
         vy_elec = distribucion_normal_5(0,sigmavelxy);
         vz_elec = sqrt(2.0*energia_z*CHARGE_E/(masas[0]*MASS_U));
-        particulas.add_particle( I/50000.0, -1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.0,vz_elec) );
+        particulas.add_particle( I/n_cumulos, -1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.0,vz_elec) );
+        //particulas.add_particle( I/n_cumulos, -1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.005,-vz_elec) );
         //particulas.add_particle( 1, -1, masas[0], ParticleP3D(0,-cell_size,1e8,0.0,0.0,0.1,0) );
         if(x_elec*x_elec+y_elec*y_elec >= 0.11*0.11){
             cout << "x: " << x_elec << " y: " << y_elec << "\n";
             getchar();
         }
 	}
-	for(int i_part=0; i_part<50000; i_part++){
+	for(int i_part=0; i_part<n_cumulos; i_part++){
 	//for(int i_part=0; i_part<1; i_part++){
         float vx_elec, x_elec, vy_elec, y_elec, vz_elec;
         x_elec = distribucion_normal_5(0.0,0.019);
@@ -359,7 +372,8 @@ int main( int argc, char **argv ){
         y_elec = distribucion_normal_5(0.0,0.019);
         vy_elec = distribucion_normal_5(0,sigmavelxy);
         vz_elec = sqrt(2.0*energia_z*CHARGE_E/(masas[0]*MASS_U));
-        particulas_sec.add_particle( I/50000.0, 1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.0,vz_elec) );
+        particulas_sec.add_particle( I/n_cumulos, 1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.0,vz_elec) );
+        //particulas_sec.add_particle( I/n_cumulos, 1, masas[0], ParticleP3D(0,x_elec,vx_elec,y_elec,vy_elec,0.005,-vz_elec) );
         //particulas.add_particle( 1, -1, masas[0], ParticleP3D(0,-cell_size,1e8,0.0,0.0,0.1,0) );
         if(x_elec*x_elec+y_elec*y_elec >= 0.11*1.11){
             cout << "x: " << x_elec << " y: " << y_elec << "\n";
@@ -457,6 +471,7 @@ int main( int argc, char **argv ){
 		//densidad.clear();
 		double /*dt_t = 1e-12,*/ frec_rf = 1e8;
 		dt_global = 7.35178e-11;
+		dt_global = 1e-10;
 
 
         particulas.set_max_time( dt_global );
@@ -506,6 +521,22 @@ int main( int argc, char **argv ){
 
 		hacer_rms(a,particulas,rms_elec);
 		hacer_rms(a,particulas_sec,rms_ion);
+        //Vec3D posicioon(0,0,0.005);
+        //cout << "Nodo mas cercano a : " << posicioon << ":\t" << scharge_beam.closest_node(posicioon) << endl;
+        //cout << "Scharge: " << scharge_beam(scharge_beam.closest_node(posicioon)[0],scharge_beam.closest_node(posicioon)[1],scharge_beam.closest_node(posicioon)[2]);
+		//cout << "\nCarga total beam: ";
+		//cout << "Carga total sec: ";
+        if(a%50==0){
+            ofstream file_carga( "carga_por_slab.dat", ios::app);
+            calcular_carga_por_slab(a, scharge_tot, file_carga);
+            file_carga.close();
+            ofstream file_energia( "energia_por_slab.dat", ios::app);
+            calcular_energia_por_slab(a, scharge_tot, file_energia);
+            file_energia.close();
+        }
+		//cout << "\nCarga total beam: " << carga_total_beam << endl;
+		//cout << "Carga total sec: " << carga_total_sec << endl;
+
 		//hacer_histograma_v_r_E(a, 0, particulas);
 
         sumar_a_gdx_promedio(particulas);
@@ -513,7 +544,7 @@ int main( int argc, char **argv ){
             hacer_histograma_x(a, particulas);
             imprimir_scharge(a, scharge_beam);
 		}
-		imprimir_x_vx(t_iter,particulas,x_vx);
+		//imprimir_x_vx(t_iter,particulas,x_vx);
 
 
 		//campoelectrico_ext*=-1.0;
@@ -1172,7 +1203,7 @@ for(size_t k = 0; k < pdb.size(); k++){
 		sum_y2 += fabs(pp.IQ())*vel(1)*vel(1);
 		sum_z2 += fabs(pp.IQ())*vel(2)*vel(2);
 		//sum_z2 += fabs(pp.IQ())*(vel(2)-vref)*(vel(2)-vref);
-		sum_E += 0.5*100*pp.m()*( vel(0)*vel(0)+vel(1)*vel(1)+vel(2)*vel(2) );
+		sum_E += 0.5*pp.m()*( vel(0)*vel(0)+vel(1)*vel(1)+vel(2)*vel(2) );
 
 		masa = pp.m();
 		I_total2 += fabs(pp.IQ());
@@ -1195,7 +1226,7 @@ if(contadorparticulas==0){
 fout << a << "\t";
 for(int i = 0; i < 3; i++)fout << setw(12) << temp(i) << "\t";
 for(int i = 0; i < 3; i++)fout << setw(12) << temp2(i) << "\t";
-fout << sum_E/CHARGE_E/pdb.size() << "\t" << endl;
+fout << sum_E << "\t" << endl;
 
 /*cout << endl << "Temp_x: " << temp(0) << endl;
 cout << "Temp_y: " << temp(1) << endl;
@@ -1624,4 +1655,67 @@ void imprimir_scharge(int a, MeshScalarField scharge ){
     }
     scharge_out.close();
     scharge_out.clear();
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+void calcular_carga_por_slab(int a, MeshScalarField scharge, ofstream &fout){
+    Int3D i;
+    double carga_total[9]={0}, h_sc=scharge.h();
+    fout << a << "\t";
+    for(i[2]=0; i[2]<int_size[2]; i[2]++){
+        for(i[0]=0; i[0]<int_size[0]; i[0]++){
+            for(i[1]=0; i[1]<int_size[1]; i[1]++){
+                //cout << "scharge_" << i[0] << "_" << i[1] << "_" << i[2] << ": " << scharge_beam( i[0],i[1],i[2] ) << endl;
+                //cout << "portadores de carga_" << i[0] << "_" << i[1] << "_" << i[2] << ": " << scharge_beam( i[0],i[1],i[2] )*scharge_beam.h()*scharge_beam.h()*scharge_beam.h()/CHARGE_E << endl;
+                if(norma( scharge.coord_of_node( i )[0], scharge.coord_of_node( i )[1] )<=radio)in_or_out[i[0]][i[1]]=true;
+                else in_or_out[i[0]][i[1]]=false;
+                carga_total[ i[2] ]+=scharge( i[0],i[1],i[2] )*h_sc*h_sc*h_sc/CHARGE_E;
+                //carga_total_sec[ i[2] ]+=scharge_sec( i[0],i[1],i[2] )*scharge_sec.h()*scharge_sec.h()*scharge_sec.h()/CHARGE_E;
+                //if(scharge_beam( i[0],i[1],i[2] )<0)getchar();
+            }
+        }
+        fout << carga_total[i[2]] << "\t";
+    }
+    fout << endl;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+void calcular_energia_por_slab(int a, MeshScalarField scharge, ofstream &fout){
+    cout << "\nEntro a calc_energia" << endl;
+    Int3D i, j;
+    double energia_potencial[9]={0}, carga_i=0, carga_j=0, h_sc=scharge.h(), distancia = 0;
+    for(i[2]=0; i[2]<int_size[2]; i[2]++){
+        j[2]=i[2];
+        cout << "iz: " << i[2] << endl;
+        for(i[0]=0; i[0]<int_size[0]; i[0]++){
+            for(i[1]=0; i[1]<int_size[1]; i[1]++){
+                if( (scharge(i[0],i[1],i[2])!=0)&&(in_or_out[i[0]][i[1]]) ){
+                    for(j[0]=0; j[0]<int_size[0]; j[0]++){
+                        for(j[1]=0; j[1]<int_size[1]; j[1]++){
+                            if( (scharge(j[0],j[1],j[2])!=0)&&(in_or_out[j[0]][j[1]]) ){
+                                if((i[0]!=j[0])||(i[1]!=j[1])){
+                                    //cout << "scharge_" << i[0] << "_" << i[1] << "_" << i[2] << ": " << scharge_beam( i[0],i[1],i[2] ) << endl;
+                                    //cout << "portadores de carga_" << i[0] << "_" << i[1] << "_" << i[2] << ": " << scharge_beam( i[0],i[1],i[2] )*scharge_beam.h()*scharge_beam.h()*scharge_beam.h()/CHARGE_E << endl;
+                                    //cout << "i_x: " << i[0] <<  " i_y: " << i[1] <<  " j_x: " << j[0] <<  " j_y: " << j[1] << endl;
+                                    carga_i=scharge( i[0],i[1],i[2] )*h_sc*h_sc*h_sc;
+                                    carga_j=scharge( j[0],j[1],i[2] )*h_sc*h_sc*h_sc;
+                                    distancia = norma( scharge.coord_of_node( i )[0]-scharge.coord_of_node( j )[0] , scharge.coord_of_node( i )[1]-scharge.coord_of_node( j )[1] );
+                                    energia_potencial[ i[2] ]+=carga_i*carga_j/(4*PI*EPCE*distancia);
+                                    //if(scharge_beam( i[0],i[1],i[2] )<0)getchar();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fout << a << "\t";
+    for(int i=0; i<int_size[2]; i++){
+        fout << energia_potencial[i] << "\t";
+    }
+    fout << endl;
+}
+////////////////////////////////////////////////////////////////////////////////////
+float norma(float a, float b){
+    return(sqrt(a*a+b*b));
 }
